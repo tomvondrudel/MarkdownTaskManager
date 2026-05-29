@@ -34,6 +34,21 @@
             --priority-black: #1F2937;
         }
 
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --border-color: #404040;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --input-bg: #3a3a3a;
+            --input-text: #f0f0f0;
+            --input-border: #555555;
+            --accent: #64B5F6;
+            --accent-hover: #42A5F5;
+            --shadow: 0 2px 4px rgba(0,0,0,0.3);
+            --shadow-hover: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: var(--bg-primary);
@@ -180,7 +195,7 @@
         }
 
         .task-card {
-            background: white;
+            background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 6px;
             padding: 1rem;
@@ -195,6 +210,16 @@
 
         .task-card.dragging {
             opacity: 0.5;
+        }
+
+        .drop-indicator {
+            height: 18px;
+            margin: 2px 0;
+            border-radius: 8px;
+            border: 2px dashed var(--primary);
+            background: rgba(66, 153, 225, 0.16);
+            box-shadow: inset 0 0 0 1px rgba(66, 153, 225, 0.22);
+            pointer-events: none;
         }
 
         .task-header {
@@ -344,6 +369,7 @@
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            overscroll-behavior: contain;
         }
 
         .modal.active {
@@ -351,12 +377,17 @@
         }
 
         .modal-content {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 8px;
             padding: 2rem;
             width: 80%;
             max-height: 90vh;
             overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        body.modal-open {
+            overflow: hidden;
         }
 
         .modal-header {
@@ -398,19 +429,29 @@
             border-radius: 6px;
             font-size: 0.95rem;
             font-family: inherit;
-        }
-
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .task-detail {
-            line-height: 1.8;
+            background: var(--input-bg, var(--bg-secondary));
+            color: var(--input-text, var(--text-primary));
+            box-sizing: border-box;
         }
 
         .task-detail strong {
             color: var(--text-primary);
+        }
+
+        .task-detail .task-description {
+            display: block !important;
+            -webkit-line-clamp: none !important;
+            -webkit-box-orient: horizontal !important;
+            overflow: visible !important;
+            max-height: none !important;
+        }
+
+        .modal-description {
+            display: block !important;
+            -webkit-line-clamp: none !important;
+            -webkit-box-orient: horizontal !important;
+            overflow: visible !important;
+            max-height: none !important;
         }
 
         .actions {
@@ -423,10 +464,10 @@
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            background: white;
+            background: var(--bg-secondary);
             padding: 1rem 1.5rem;
             border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: var(--shadow);
             display: none;
             align-items: center;
             gap: 0.75rem;
@@ -500,11 +541,14 @@
         <div class="header-content">
             <h1 id="headerTitle">📋 Task Manager</h1>
             <div style="display: flex; gap: 0.75rem; align-items: center;">
-                <select id="languageSelector" onchange="setLanguage(this.value)" style="padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer;">
+                <button id="themeToggle" class="btn btn-secondary" onclick="toggleTheme()" style="padding: 0.6rem;" title="Toggle dark/light mode">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <select id="languageSelector" onchange="setLanguage(this.value)" style="padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
                     <option value="en">English</option>
                     <option value="fr">Français</option>
                 </select>
-                <select id="projectSelector" style="display: none; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer; min-width: 180px;">
+                <select id="projectSelector" style="display: none; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; min-width: 180px;">
                 </select>
                 <button id="renameProjectBtn" class="btn btn-secondary" style="display: none; padding: 0.6rem;" title="Renommer le projet" onclick="renameCurrentProject()">✏️</button>
                 <button id="deleteProjectBtn" class="btn btn-secondary" style="display: none; padding: 0.6rem;" title="Supprimer le projet" onclick="deleteCurrentProject()">🗑️</button>
@@ -515,7 +559,7 @@
             </div>
         </div>
     </header>
-    <div id="filterBar" style="display: none; background: white; border-bottom: 1px solid var(--border); padding: 1rem 0;">
+    <div id="filterBar" style="display: none; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 1rem 0;">
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
             <!-- Global Search -->
             <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
@@ -524,7 +568,7 @@
                         type="text"
                         id="globalSearchInput"
                         placeholder="Rechercher dans les tâches..."
-                        style="width: 100%; padding: 0.75rem 3rem 0.75rem 1rem; border: 2px solid #cbd5e0; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s;"
+                        style="width: 100%; padding: 0.75rem 3rem 0.75rem 1rem; border: 2px solid var(--border-color); border-radius: 8px; font-size: 1rem; background: var(--input-bg, var(--bg-secondary)); color: var(--input-text, var(--text-primary)); transition: border-color 0.2s;"
                         oninput="applyGlobalSearch()"
                     >
                     <button
@@ -577,7 +621,7 @@
             <button onclick="document.getElementById('selectFolderBtn').click()" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem;">
                 📁 Commencer
             </button>
-            <div style="margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 8px; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left;">
+            <div style="margin-top: 2rem; padding: 1.5rem; background: var(--bg-secondary); border-radius: 8px; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left;">
                 <h3 style="margin-bottom: 1rem;">💡 Comment ça marche ?</h3>
                 <ol style="margin-left: 1.5rem; color: var(--text-secondary);">
                     <li>Cliquez sur "Commencer" ci-dessus</li>
@@ -754,6 +798,7 @@
         let formSubtasks = [];
         let archivedTasks = [];
         let archiveFileHandle = null;
+        let draggedTaskId = null;
 
         // ===== TRANSLATION SYSTEM =====
         let currentLanguage = 'en'; // Default language
@@ -1260,7 +1305,7 @@
             <button onclick="document.getElementById('selectFolderBtn').click()" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem;">
                 ${t('welcome.start')}
             </button>
-            <div style="margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 8px; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left;">
+            <div style="margin-top: 2rem; padding: 1.5rem; background: var(--bg-secondary); border-radius: 8px; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left;">
                 <h3 style="margin-bottom: 1rem;">${t('welcome.howItWorks')}</h3>
                 <ol style="margin-left: 1.5rem; color: var(--text-secondary);">
                     <li>${t('welcome.step1')}</li>
@@ -1279,11 +1324,6 @@
 
         // Render task detail modal structure with translations
         function renderTaskDetailModal() {
-            const modalTitle = document.getElementById('modalTitle');
-            if (modalTitle) {
-                modalTitle.textContent = t('taskDetail.title');
-            }
-
             // Update buttons in task detail modal
             const taskModal = document.getElementById('taskModal');
             if (taskModal) {
@@ -1469,8 +1509,11 @@
 
         // Initialize language on page load
         initLanguage();
-        // Update static texts after DOM loads
-        document.addEventListener('DOMContentLoaded', updateStaticTexts);
+        // Update static texts after DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            updateStaticTexts();
+        });
 
         // Check if File System Access API is supported
         if (!('showDirectoryPicker' in window)) {
@@ -2174,7 +2217,11 @@ ${t('markdown.archiveSection')}
                     descriptionLines.push(line.trim());
                 }
             }
-            task.description = descriptionLines.join(' ').substring(0, 200);
+            //task.description = descriptionLines.join(' ').substring(0, 200);
+            //TN: removed the truncation of 200 characters as that effectively 
+            //truncates the description to a random point in the middle and loses the text!
+            //Also changed to newline as all text was otherwise on one line
+            task.description = descriptionLines.join('\n');
 
             // Parse subtasks
             const subtaskMatches = content.matchAll(/- \[(x| )\] (.+)/g);
@@ -2527,6 +2574,11 @@ ${t('markdown.archiveSection')}
         }
 
         // Column management
+        function syncBodyScrollLock() {
+            const hasActiveModal = document.querySelector('.modal.active') !== null;
+            document.body.classList.toggle('modal-open', hasActiveModal);
+        }
+
         function openColumnsModal() {
             const modal = document.getElementById('columnsModal');
             const list = document.getElementById('columnsList');
@@ -2542,10 +2594,12 @@ ${t('markdown.archiveSection')}
                 </div>
             `).join('');
             modal.classList.add('active');
+            syncBodyScrollLock();
         }
 
         function closeColumnsModal() {
             document.getElementById('columnsModal').classList.remove('active');
+            syncBodyScrollLock();
         }
 
         function addColumn() {
@@ -2633,6 +2687,7 @@ ${t('markdown.archiveSection')}
 
             renderFormSubtasks();
             modal.classList.add('active');
+            syncBodyScrollLock();
         }
 
         function closeTaskModal() {
@@ -2640,6 +2695,7 @@ ${t('markdown.archiveSection')}
             document.getElementById('newTaskForm').reset();
             formSubtasks = [];
             isEditMode = false;
+            syncBodyScrollLock();
         }
 
         // Form subtasks management
@@ -2749,7 +2805,6 @@ ${t('markdown.archiveSection')}
             taskEl.innerHTML = `
                 <div class="task-header">
                     <span class="task-id">${task.id}</span>
-                    <button class="task-edit-btn" onclick="event.stopPropagation(); openTaskModal(tasks.find(t => t.id === '${task.id}'))" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0.25rem;">✏️</button>
                 </div>
                 <div class="task-title">${task.title}</div>
                 ${task.description ? `<div class="task-description">${markdownToHtml(task.description)}</div>` : ''}
@@ -2766,43 +2821,175 @@ ${t('markdown.archiveSection')}
             `;
 
             taskEl.addEventListener('dragstart', drag);
+            taskEl.addEventListener('dragend', dragEnd);
             taskEl.addEventListener('click', () => showTaskDetail(task));
 
             return taskEl;
         }
 
         // Drag & Drop
+        function getTaskListFromEventTarget(target) {
+            let node = target;
+            while (node && !node.classList?.contains('task-list')) {
+                node = node.parentElement;
+            }
+            return node && node.classList?.contains('task-list') ? node : null;
+        }
+
+        function getDropIndicator() {
+            return document.getElementById('dropIndicator');
+        }
+
+        function clearDropIndicator() {
+            const indicator = getDropIndicator();
+            if (indicator && indicator.parentElement) {
+                indicator.parentElement.removeChild(indicator);
+            }
+        }
+
+        function getDropInsertElement(taskList, y) {
+            const cards = [...taskList.querySelectorAll('.task-card:not(.dragging)')];
+            let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+
+            cards.forEach(card => {
+                const box = card.getBoundingClientRect();
+                const offset = y - (box.top + box.height / 2);
+                if (offset < 0 && offset > closest.offset) {
+                    closest = { offset, element: card };
+                }
+            });
+
+            return closest.element;
+        }
+
+        function isNoOpDropPosition(taskId, newStatus, beforeTaskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task || task.status !== newStatus) return false;
+
+            const columnTaskIds = tasks
+                .filter(t => t.status === newStatus)
+                .map(t => t.id);
+            const currentIndex = columnTaskIds.indexOf(taskId);
+            if (currentIndex === -1) return false;
+
+            const idsWithoutDragged = columnTaskIds.filter(id => id !== taskId);
+            const targetIndex = beforeTaskId
+                ? idsWithoutDragged.indexOf(beforeTaskId)
+                : idsWithoutDragged.length;
+
+            return (targetIndex === -1 ? idsWithoutDragged.length : targetIndex) === currentIndex;
+        }
+
+        function moveTaskToPosition(taskId, newStatus, beforeTaskId) {
+            const fromIndex = tasks.findIndex(t => t.id === taskId);
+            if (fromIndex === -1) return false;
+
+            const [task] = tasks.splice(fromIndex, 1);
+            const previousStatus = task.status;
+            task.status = newStatus;
+
+            let insertIndex = -1;
+            if (beforeTaskId) {
+                insertIndex = tasks.findIndex(t => t.id === beforeTaskId);
+            }
+
+            if (insertIndex === -1) {
+                let lastIndexInStatus = -1;
+                tasks.forEach((t, idx) => {
+                    if (t.status === newStatus) {
+                        lastIndexInStatus = idx;
+                    }
+                });
+
+                if (lastIndexInStatus === -1) {
+                    tasks.push(task);
+                } else {
+                    tasks.splice(lastIndexInStatus + 1, 0, task);
+                }
+            } else {
+                tasks.splice(insertIndex, 0, task);
+            }
+
+            const toIndex = tasks.findIndex(t => t.id === taskId);
+            return previousStatus !== newStatus || fromIndex !== toIndex;
+        }
+
         function allowDrop(event) {
             event.preventDefault();
+
+            if (!draggedTaskId) return;
+
+            const taskList = getTaskListFromEventTarget(event.currentTarget || event.target);
+            if (!taskList) return;
+
+            let indicator = getDropIndicator();
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'dropIndicator';
+                indicator.className = 'drop-indicator';
+            }
+
+            const insertBefore = getDropInsertElement(taskList, event.clientY);
+            const columnEl = taskList.closest('.kanban-column');
+            const newStatus = columnEl ? columnEl.dataset.columnId : null;
+            const beforeTaskId = insertBefore ? insertBefore.dataset.taskId : null;
+
+            if (newStatus && isNoOpDropPosition(draggedTaskId, newStatus, beforeTaskId)) {
+                clearDropIndicator();
+                return;
+            }
+
+            if (insertBefore) {
+                taskList.insertBefore(indicator, insertBefore);
+            } else {
+                taskList.appendChild(indicator);
+            }
         }
 
         function drag(event) {
-            event.dataTransfer.setData('taskId', event.target.dataset.taskId);
-            event.target.classList.add('dragging');
+            const taskCard = event.currentTarget;
+            draggedTaskId = taskCard.dataset.taskId;
+            event.dataTransfer.setData('taskId', draggedTaskId);
+            event.dataTransfer.effectAllowed = 'move';
+            taskCard.classList.add('dragging');
+        }
+
+        function dragEnd(event) {
+            event.currentTarget.classList.remove('dragging');
+            draggedTaskId = null;
+            clearDropIndicator();
         }
 
         function drop(event) {
             event.preventDefault();
-            const taskId = event.dataTransfer.getData('taskId');
+            const taskId = event.dataTransfer.getData('taskId') || draggedTaskId;
             const taskEl = document.querySelector(`[data-task-id="${taskId}"]`);
 
             if (taskEl) {
                 taskEl.classList.remove('dragging');
 
-                // Find the column
-                let dropTarget = event.target;
-                while (dropTarget && !dropTarget.classList.contains('task-list')) {
-                    dropTarget = dropTarget.parentElement;
-                }
+                const dropTarget = getTaskListFromEventTarget(event.currentTarget || event.target);
 
                 if (dropTarget && dropTarget.classList.contains('task-list')) {
+                    const indicator = getDropIndicator();
+                    let beforeTaskId = null;
+
+                    if (indicator && indicator.parentElement === dropTarget) {
+                        let nextNode = indicator.nextElementSibling;
+                        while (nextNode && !nextNode.classList.contains('task-card')) {
+                            nextNode = nextNode.nextElementSibling;
+                        }
+                        beforeTaskId = nextNode ? nextNode.dataset.taskId : null;
+                    }
+
                     const columnEl = dropTarget.closest('.kanban-column');
                     const newStatus = columnEl.dataset.columnId;
 
-                    // Update task status
-                    const task = tasks.find(t => t.id === taskId);
-                    if (task && task.status !== newStatus) {
-                        task.status = newStatus;
+                    const taskWasMoved = moveTaskToPosition(taskId, newStatus, beforeTaskId);
+                    clearDropIndicator();
+                    draggedTaskId = null;
+
+                    if (taskWasMoved) {
                         renderKanban();
                         autoSave();
                         showNotification(t('notif.taskMoved'), 'success');
@@ -2816,6 +3003,13 @@ ${t('markdown.archiveSection')}
             currentDetailTask = task;
             const modal = document.getElementById('taskModal');
             const modalBody = document.getElementById('modalBody');
+            const modalTitle = document.getElementById('modalTitle');
+            const visibleTags = (task.tags || [])
+                .map(tag => String(tag).trim())
+                .filter(Boolean);
+
+            // Update modal title with task ID
+            modalTitle.textContent = task.id;
 
             // Get priority with translation
             let priorityWithIcon = task.priority;
@@ -2831,17 +3025,12 @@ ${t('markdown.archiveSection')}
             const statusName = statusColumn ? statusColumn.name : task.status;
 
             modalBody.innerHTML = `
-                <div style="padding: 1.5rem;">
-                    <!-- Task ID Badge -->
-                    <div style="display: inline-block; background: var(--primary); color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem;">
-                        ${task.id}
-                    </div>
-
+                <div style="padding: 0.75rem 1.5rem 1.5rem;">
                     <!-- Title -->
-                    <h3 style="margin: 0 0 1.5rem 0; font-size: 1.5rem; color: var(--text);">${task.title}</h3>
+                    <h3 style="margin: 0 0 1rem 0; font-size: 1.5rem; color: var(--text-primary);">${task.title}</h3>
 
                     <!-- Metadata Grid -->
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg); border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg); border-radius: 8px;">
                         ${task.priority ? `
                             <div>
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">${t('meta.priority')}</div>
@@ -2898,38 +3087,36 @@ ${t('markdown.archiveSection')}
                     </div>
 
                     <!-- Tags -->
-                    ${task.tags.length > 0 ? `
-                        <div style="margin-bottom: 1.5rem;">
+                    <div style="margin-bottom: 1rem;">
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">${t('meta.tags')}</div>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                ${task.tags.map(tag => `
-                                    <span style="background: var(--primary); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
+                                ${visibleTags.length > 0 ? visibleTags.map(tag => `
+                                    <span style="background: var(--accent); color: white; padding: 0.2rem 0.65rem; border-radius: 12px; font-size: 0.8rem; line-height: 1.2;">
                                         ${tag}
                                     </span>
-                                `).join('')}
+                                `).join('') : `<span style="color: var(--text-secondary); font-size: 0.9rem;">—</span>`}
                             </div>
                         </div>
-                    ` : ''}
 
                     <!-- Description -->
                     ${task.description ? `
                         <div style="margin-bottom: 1.5rem;">
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">${t('meta.description')}</div>
-                            <div style="line-height: 1.6; color: var(--text);">${markdownToHtml(task.description)}</div>
+                            <div class="task-description modal-description" style="line-height: 1.6; color: var(--text);">${markdownToHtml(task.description)}</div>
                         </div>
                     ` : ''}
 
                     <!-- Subtasks -->
-                    <div style="margin-bottom: 1.5rem;">
+                    <div style="margin-bottom: 1rem;">
                         <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">${t('meta.subtasks', {completed: task.subtasks.filter(st => st.completed).length, total: task.subtasks.length})}</div>
-                        <ul id="subtasksList" style="list-style: none; padding: 0; margin: 0 0 1rem 0;">
+                        <ul id="subtasksList" style="list-style: none; padding: 0; margin: 0 0 0.4rem 0;">
                             ${task.subtasks.map((st, idx) => {
                                 const escapedText = st.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
                                 return `
-                                <li style="padding: 0.5rem; margin-bottom: 0.25rem; background: var(--bg); border-radius: 4px; display: flex; align-items: center; gap: 0.5rem;">
-                                    <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleSubtask('${task.id}', ${idx})" style="width: 18px; height: 18px; cursor: pointer;">
+                                <li style="padding: 0.28rem 0.36rem; margin-bottom: 0.08rem; background: var(--bg-secondary); border-radius: 4px; display: flex; align-items: center; gap: 0.32rem; line-height: 1.2;">
+                                    <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleSubtask('${task.id}', ${idx})" style="width: 16px; height: 16px; cursor: pointer;">
                                     <span ondblclick="editSubtask('${task.id}', ${idx})" style="flex: 1; ${st.completed ? 'text-decoration: line-through; color: var(--text-secondary);' : ''} cursor: pointer;" title="${t('tooltip.doubleClickEdit')}">${escapedText}</span>
-                                    <button onclick="deleteSubtask('${task.id}', ${idx})" style="background: none; border: none; cursor: pointer; color: #e53e3e; font-size: 1.1rem; padding: 0.25rem;" title="${t('tooltip.delete')}">🗑️</button>
+                                    <button onclick="deleteSubtask('${task.id}', ${idx})" style="background: none; border: none; cursor: pointer; color: #e53e3e; font-size: 1.1rem; padding: 0.2rem;" title="${t('tooltip.delete')}">🗑️</button>
                                 </li>
                                 `;
                             }).join('')}
@@ -2953,10 +3140,12 @@ ${t('markdown.archiveSection')}
             `;
 
             modal.classList.add('active');
+            syncBodyScrollLock();
         }
 
         function closeModal() {
             document.getElementById('taskModal').classList.remove('active');
+            syncBodyScrollLock();
         }
 
         function editCurrentTask() {
@@ -3218,11 +3407,13 @@ ${t('markdown.archiveSection')}
             await loadArchive();
             renderArchiveList();
             document.getElementById('archiveModal').classList.add('active');
+            syncBodyScrollLock();
             console.log('✓ Archive modal opened');
         }
 
         function closeArchiveModal() {
             document.getElementById('archiveModal').classList.remove('active');
+            syncBodyScrollLock();
         }
 
         function renderArchiveList(searchTerm = '') {
@@ -3304,6 +3495,72 @@ ${t('markdown.archiveSection')}
         document.getElementById('newTaskBtn').addEventListener('click', () => openTaskModal());
         document.getElementById('archiveBtn').addEventListener('click', openArchiveModal);
         document.getElementById('manageColsBtn').addEventListener('click', openColumnsModal);
+
+        function closeModalById(modalId) {
+            if (modalId === 'taskModal') {
+                closeModal();
+            } else if (modalId === 'newTaskModal') {
+                closeTaskModal();
+            } else if (modalId === 'columnsModal') {
+                closeColumnsModal();
+            } else if (modalId === 'archiveModal') {
+                closeArchiveModal();
+            }
+        }
+
+        // Click-outside-to-close functionality disabled 
+        // document.querySelectorAll('.modal').forEach((modal) => {
+        //     modal.addEventListener('click', (event) => {
+        //         // Close only when clicking on the backdrop, not modal content
+        //         if (event.target === modal) {
+        //             closeModalById(modal.id);
+        //         }
+        //     });
+        // });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                if (document.getElementById('taskModal').classList.contains('active')) {
+                    closeModal();
+                } else if (document.getElementById('newTaskModal').classList.contains('active')) {
+                    closeTaskModal();
+                } else if (document.getElementById('columnsModal').classList.contains('active')) {
+                    closeColumnsModal();
+                } else if (document.getElementById('archiveModal').classList.contains('active')) {
+                    closeArchiveModal();
+                }
+                return;
+            }
+
+            // Arrow key navigation in task detail modal
+            if (document.getElementById('taskModal').classList.contains('active') && currentDetailTask) {
+                if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    
+                    // Get all tasks in the same column
+                    const columnTasks = tasks.filter(t => t.status === currentDetailTask.status);
+                    if (columnTasks.length <= 1) return;
+                    
+                    // Find current task index
+                    const currentIndex = columnTasks.findIndex(t => t.id === currentDetailTask.id);
+                    if (currentIndex === -1) return;
+                    
+                    // Calculate next index
+                    let nextIndex;
+                    if (event.key === 'ArrowRight') {
+                        nextIndex = (currentIndex + 1) % columnTasks.length;
+                    } else {
+                        nextIndex = currentIndex === 0 ? columnTasks.length - 1 : currentIndex - 1;
+                    }
+                    
+                    // Show next task
+                    const nextTask = columnTasks[nextIndex];
+                    if (nextTask) {
+                        showTaskDetail(nextTask);
+                    }
+                }
+            }
+        });
 
         // Generate Markdown from tasks - SIMPLIFIED!
         function generateMarkdown() {
@@ -3407,6 +3664,29 @@ ${t('markdown.archiveSection')}
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
+        }
+
+        // Theme management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            // Update icon
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
         }
     </script>
 </body>
