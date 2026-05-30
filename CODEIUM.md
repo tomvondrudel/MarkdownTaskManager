@@ -13,6 +13,7 @@ This file contains everything: format, workflow, commands, examples.
 ## ⚙️ Critical Rule #1
 
 **NO `##` or `###` headings inside a task**
+
 - Use `**Subtasks**:` and `**Notes**:` with colons
 - Subsections: `**Result**:`, `**Modified files**:`
 

@@ -212,6 +212,30 @@
             opacity: 0.5;
         }
 
+        .task-actions {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .task-action-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .task-action-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
         .drop-indicator {
             height: 18px;
             margin: 2px 0;
@@ -458,6 +482,17 @@
             display: flex;
             gap: 1rem;
             margin-top: 1.5rem;
+            justify-content: space-between;
+        }
+
+        .actions-left {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .actions-right {
+            display: flex;
+            gap: 1rem;
         }
 
         .notification {
@@ -1330,10 +1365,16 @@
                 const actions = taskModal.querySelector('.actions');
                 if (actions) {
                     actions.innerHTML = `
-                        <button class="btn btn-secondary" onclick="closeModal()">${t('taskDetail.close')}</button>
-                        <button class="btn btn-secondary" onclick="deleteCurrentTask()" style="background: #ef4444; color: white;">${t('taskDetail.delete')}</button>
-                        <button class="btn btn-secondary" onclick="archiveCurrentTask()" style="background: #f59e0b; color: white;">${t('taskDetail.archive')}</button>
-                        <button class="btn btn-primary" id="editTaskBtn" onclick="editCurrentTask()">${t('taskDetail.edit')}</button>
+                        <div class="actions-left">
+                            <button class="btn btn-secondary" onclick="closeModal()">${t('taskDetail.close')}</button>
+                            <button class="btn btn-secondary" onclick="deleteCurrentTask()" style="background: #ef4444; color: white;">${t('taskDetail.delete')}</button>
+                            <button class="btn btn-secondary" onclick="archiveCurrentTask()" style="background: #f59e0b; color: white;">${t('taskDetail.archive')}</button>
+                            <button class="btn btn-primary" id="editTaskBtn" onclick="editCurrentTask()">${t('taskDetail.edit')}</button>
+                        </div>
+                        <div class="actions-right">
+                            <button class="btn btn-secondary" onclick="moveTaskToTop(currentDetailTask?.id)" title="Move to top">⬆️ Top</button>
+                            <button class="btn btn-secondary" onclick="moveTaskToBottom(currentDetailTask?.id)" title="Move to bottom">⬇️ Bottom</button>
+                        </div>
                     `;
                 }
             }
@@ -2912,6 +2953,59 @@ ${t('markdown.archiveSection')}
 
             const toIndex = tasks.findIndex(t => t.id === taskId);
             return previousStatus !== newStatus || fromIndex !== toIndex;
+        }
+
+        function moveTaskToTop(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const currentStatus = task.status;
+            const columnTasks = tasks.filter(t => t.status === currentStatus);
+            
+            // If already at top, do nothing
+            if (columnTasks[0]?.id === taskId) return;
+
+            // Remove task from current position
+            const fromIndex = tasks.findIndex(t => t.id === taskId);
+            const [movedTask] = tasks.splice(fromIndex, 1);
+
+            // Find the first task in the same column
+            const firstTaskInColumnIndex = tasks.findIndex(t => t.status === currentStatus);
+            
+            // Insert at the top of the column
+            tasks.splice(firstTaskInColumnIndex, 0, movedTask);
+
+            renderKanban();
+            autoSave();
+        }
+
+        function moveTaskToBottom(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const currentStatus = task.status;
+            const columnTasks = tasks.filter(t => t.status === currentStatus);
+            
+            // If already at bottom, do nothing
+            if (columnTasks[columnTasks.length - 1]?.id === taskId) return;
+
+            // Remove task from current position
+            const fromIndex = tasks.findIndex(t => t.id === taskId);
+            const [movedTask] = tasks.splice(fromIndex, 1);
+
+            // Find the last task in the same column
+            let lastIndexInStatus = -1;
+            tasks.forEach((t, idx) => {
+                if (t.status === currentStatus) {
+                    lastIndexInStatus = idx;
+                }
+            });
+
+            // Insert at the bottom of the column
+            tasks.splice(lastIndexInStatus + 1, 0, movedTask);
+
+            renderKanban();
+            autoSave();
         }
 
         function allowDrop(event) {
