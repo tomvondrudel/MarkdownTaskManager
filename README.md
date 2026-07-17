@@ -466,6 +466,19 @@ With this system, you have:
 - Check/uncheck in real time
 - Visual progress bar
 - Counter (e.g., "3/5 subtasks completed")
+- Promote a subtask to its own task (⤴️) — it becomes a linked sub-issue
+
+**Sub-issues (parent/child tasks):**
+
+When a subtask is substantial enough to be its own ticket, link it to its parent task instead of losing the relationship in the backlog:
+
+- A child task carries `**Parent**: TASK-XXX` in the markdown — a single source of truth, GitHub sub-issues style
+- Child cards show a clickable `↳ TASK-XXX` chip; clicking filters the board to that family (parent + all its sub-issues)
+- Parent cards show a sub-issue rollup (e.g., "⧉ 2/7") counting children in the Done column, separate from the checkbox progress bar
+- The parent's detail modal lists all sub-issues with their status, clickable to navigate
+- One level deep: a task with a parent cannot itself be a parent
+- A "Hide sub-tasks" toggle in the filter bar keeps the backlog scannable
+- Archiving a parent with unfinished sub-issues asks for confirmation; deleting a parent unlinks its children
 
 **Editing:**
 - Detailed editing modal for each task
@@ -496,6 +509,10 @@ With this system, you have:
 4. **Users** 🟢 (green bubbles)
    - Filter by assignment
    - Example: @alice, @bob
+
+5. **Family** 🟦 (indigo bubbles)
+   - Click the `↳ TASK-XXX` chip on a sub-issue card
+   - Shows the parent task and all its sub-issues together
 
 **How it works:**
 - Select a filter via dropdowns
@@ -653,6 +670,13 @@ Task description...
 
 ### TASK-002 | Other task
 ...
+
+### TASK-004 | A sub-issue of TASK-001
+**Parent**: TASK-001
+**Priority**: Medium | **Category**: Frontend
+**Created**: 2025-01-21
+
+Substantial piece of work that is its own ticket, linked to its parent task.
 
 ## ✅ Done
 

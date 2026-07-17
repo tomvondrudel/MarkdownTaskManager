@@ -644,6 +644,10 @@
                     <button onclick="addFilter('priority')" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">+</button>
                 </div>
                 <button onclick="clearFilters()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">✕ Tout effacer</button>
+                <label style="display: flex; gap: 0.4rem; align-items: center; font-weight: 500; font-size: 0.9rem; cursor: pointer;">
+                    <input type="checkbox" id="hideSubtasksToggle" onchange="toggleHideSubtasks(this.checked)" style="width: 16px; height: 16px; cursor: pointer;">
+                    <span id="hideSubtasksLabel">Masquer les sous-tickets</span>
+                </label>
             </div>
             <div id="activeFilters" style="display: flex; gap: 0.5rem; flex-wrap: wrap; min-height: 32px; justify-content: center;"></div>
         </div>
@@ -710,6 +714,11 @@
                 <div style="margin-bottom: 1rem;">
                     <label for="taskStatus" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Colonne *</label>
                     <select id="taskStatus" required style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; background: white; box-sizing: border-box;">
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label for="taskParent" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Tâche parente</label>
+                    <select id="taskParent" style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; background: white; box-sizing: border-box;">
                     </select>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
@@ -834,6 +843,7 @@
         let archivedTasks = [];
         let archiveFileHandle = null;
         let draggedTaskId = null;
+        let hideSubtaskCards = false; // Board toggle: hide cards that have a parent task
 
         // ===== TRANSLATION SYSTEM =====
         let currentLanguage = 'en'; // Default language
@@ -862,6 +872,7 @@
                 'filters.clearAll': '✕ Clear all',
                 'filters.search': 'Search in tasks...',
                 'filters.searchClear': '✕',
+                'filters.hideSubtasks': 'Hide sub-tasks',
 
                 // Welcome screen
                 'welcome.title': 'Welcome! 👋',
@@ -887,6 +898,9 @@
                 'taskForm.editTask': 'Edit Task',
                 'taskForm.titleLabel': 'Title *',
                 'taskForm.columnLabel': 'Column *',
+                'taskForm.parentLabel': 'Parent task',
+                'taskForm.parentNone': 'None',
+                'taskForm.parentDisabledHelp': 'This task has sub-tasks and cannot have a parent itself',
                 'taskForm.priorityLabel': 'Priority',
                 'taskForm.priorityNone': 'None',
                 'taskForm.priorityCritical': 'Critical',
@@ -940,6 +954,8 @@
                 'meta.description': 'Description',
                 'meta.subtasks': 'Subtasks ({completed}/{total})',
                 'meta.notes': 'Notes',
+                'meta.parent': 'Parent task',
+                'meta.subissues': 'Sub-issues ({completed}/{total})',
 
                 // Empty states
                 'empty.noTasks': 'No tasks',
@@ -958,6 +974,11 @@
                 'tooltip.filterByPriority': 'Filter by this priority',
                 'tooltip.doubleClickEdit': 'Double-click to edit',
                 'tooltip.delete': 'Delete',
+                'tooltip.filterByParent': 'Filter by this family (parent + sub-tasks)',
+                'tooltip.parentMissing': 'Parent task not found (archived or deleted)',
+                'tooltip.openSubIssue': 'Open this sub-task',
+                'tooltip.promote': 'Promote to its own task',
+                'tooltip.subIssueProgress': 'Sub-tasks completed (in Done column)',
 
                 // Notifications
                 'notif.folderLoaded': 'Folder loaded successfully!',
@@ -978,6 +999,7 @@
                 'notif.taskArchived': 'Task archived!',
                 'notif.taskDeleted': 'Task permanently deleted',
                 'notif.taskRestored': 'Task restored to its original column!',
+                'notif.subtaskPromoted': 'Subtask promoted to {id}!',
 
                 // Prompts and confirmations
                 'prompt.projectName': 'Project name (leave empty to use "{name}"):',
@@ -989,6 +1011,8 @@
                 'confirm.deleteSubtask': 'Delete this subtask?',
                 'confirm.deleteProject': 'Remove project "{name}" from the recent list?\n\nThis only removes it from the dropdown - your files will not be deleted.',
                 'confirm.archiveTask': 'Archive task "{title}"?',
+                'confirm.archiveParentTask': '⚠️ Task "{title}" has {count} unfinished sub-task(s).\n\nArchive it anyway? The sub-tasks will remain on the board.',
+                'confirm.promoteSubtask': 'Convert subtask "{text}" into its own task?',
                 'confirm.deleteTask': '⚠️ WARNING: Permanently delete task "{title}"?\n\nThis action cannot be undone.',
                 'confirm.deleteTaskFromArchive': '⚠️ WARNING: Permanently delete task "{title}"?\n\nThis action cannot be undone.\n\nIf you want to keep it in history, use "Archive" instead.',
 
@@ -1037,6 +1061,7 @@
                 'filters.clearAll': '✕ Tout effacer',
                 'filters.search': 'Rechercher dans les tâches...',
                 'filters.searchClear': '✕',
+                'filters.hideSubtasks': 'Masquer les sous-tickets',
 
                 // Welcome screen
                 'welcome.title': 'Bienvenue ! 👋',
@@ -1062,6 +1087,9 @@
                 'taskForm.editTask': 'Modifier la tâche',
                 'taskForm.titleLabel': 'Titre *',
                 'taskForm.columnLabel': 'Colonne *',
+                'taskForm.parentLabel': 'Tâche parente',
+                'taskForm.parentNone': 'Aucune',
+                'taskForm.parentDisabledHelp': 'Cette tâche a des sous-tickets et ne peut pas avoir de parent',
                 'taskForm.priorityLabel': 'Priorité',
                 'taskForm.priorityNone': 'Aucune',
                 'taskForm.priorityCritical': 'Critique',
@@ -1115,6 +1143,8 @@
                 'meta.description': 'Description',
                 'meta.subtasks': 'Sous-tâches ({completed}/{total})',
                 'meta.notes': 'Notes',
+                'meta.parent': 'Tâche parente',
+                'meta.subissues': 'Sous-tickets ({completed}/{total})',
 
                 // Empty states
                 'empty.noTasks': 'Aucune tâche',
@@ -1133,6 +1163,11 @@
                 'tooltip.filterByPriority': 'Filtrer par cette priorité',
                 'tooltip.doubleClickEdit': 'Double-cliquez pour éditer',
                 'tooltip.delete': 'Supprimer',
+                'tooltip.filterByParent': 'Filtrer par cette famille (parent + sous-tickets)',
+                'tooltip.parentMissing': 'Tâche parente introuvable (archivée ou supprimée)',
+                'tooltip.openSubIssue': 'Ouvrir ce sous-ticket',
+                'tooltip.promote': 'Convertir en tâche à part entière',
+                'tooltip.subIssueProgress': 'Sous-tickets terminés (dans la colonne Terminé)',
 
                 // Notifications
                 'notif.folderLoaded': 'Dossier chargé avec succès !',
@@ -1153,6 +1188,7 @@
                 'notif.taskArchived': 'Tâche archivée !',
                 'notif.taskDeleted': 'Tâche supprimée définitivement',
                 'notif.taskRestored': 'Tâche restaurée dans sa colonne d\'origine !',
+                'notif.subtaskPromoted': 'Sous-tâche convertie en {id} !',
 
                 // Prompts and confirmations
                 'prompt.projectName': 'Nom du projet (laisser vide pour utiliser "{name}") :',
@@ -1164,6 +1200,8 @@
                 'confirm.deleteSubtask': 'Supprimer cette sous-tâche ?',
                 'confirm.deleteProject': 'Retirer le projet "{name}" de la liste récente ?\n\nCeci retire seulement le projet du menu déroulant - vos fichiers ne seront pas supprimés.',
                 'confirm.archiveTask': 'Archiver la tâche "{title}" ?',
+                'confirm.archiveParentTask': '⚠️ La tâche "{title}" a {count} sous-ticket(s) non terminé(s).\n\nL\'archiver quand même ? Les sous-tickets resteront sur le tableau.',
+                'confirm.promoteSubtask': 'Convertir la sous-tâche "{text}" en tâche à part entière ?',
                 'confirm.deleteTask': '⚠️ ATTENTION : Supprimer définitivement la tâche "{title}" ?\n\nCette action est irréversible.',
                 'confirm.deleteTaskFromArchive': '⚠️ ATTENTION : Supprimer définitivement la tâche "{title}" ?\n\nCette action est irréversible.\n\nSi vous voulez la conserver dans l\'historique, utilisez plutôt "Archiver".',
 
@@ -1385,6 +1423,7 @@
             const formLabels = {
                 'taskTitle': { prev: 'label', text: t('taskForm.titleLabel') },
                 'taskStatus': { prev: 'label', text: t('taskForm.columnLabel') },
+                'taskParent': { prev: 'label', text: t('taskForm.parentLabel') },
                 'taskPriority': { prev: 'label', text: t('taskForm.priorityLabel') },
                 'taskCategory': { prev: 'label', text: t('taskForm.categoryLabel'), placeholder: t('taskForm.categoryPlaceholder') },
                 'taskAssignee': { prev: 'label', text: t('taskForm.assignedLabel'), placeholder: t('taskForm.assignedPlaceholder') },
@@ -1478,6 +1517,10 @@
             // Update clear button
             const clearBtn = filterBar.querySelector('button[onclick="clearFilters()"]');
             if (clearBtn) clearBtn.textContent = t('filters.clearAll');
+
+            // Update hide sub-tasks toggle label
+            const hideLabel = document.getElementById('hideSubtasksLabel');
+            if (hideLabel) hideLabel.textContent = t('filters.hideSubtasks');
         }
 
         // Render columns modal structure with translations
@@ -2204,7 +2247,8 @@ ${t('markdown.archiveSection')}
                 completed: '',
                 description: '',
                 subtasks: [],
-                notes: ''
+                notes: '',
+                parent: ''
             };
 
             // Parse metadata line
@@ -2236,6 +2280,10 @@ ${t('markdown.archiveSection')}
                 task.tags = tagsMatch[1].match(/#[\w-]+/g) || [];
             }
 
+            // Parse parent task reference (sub-issue relationship)
+            const parentMatch = content.match(/\*\*Parent\*\*:\s*(TASK-\d+)/);
+            if (parentMatch) task.parent = parentMatch[1];
+
             // Parse description (text after dates/tags but before "**Sous-tâches**" or "**Notes**")
             const lines = content.split('\n');
             let descriptionLines = [];
@@ -2243,7 +2291,7 @@ ${t('markdown.archiveSection')}
 
             for (let line of lines) {
                 // Skip metadata lines
-                if (line.match(/^\*\*(Priority|Category|Assigned|Created|Started|Due|Finished|Tags)\*\*/)) {
+                if (line.match(/^\*\*(Priority|Category|Assigned|Created|Started|Due|Finished|Tags|Parent)\*\*/)) {
                     continue;
                 }
                 // Stop at subsections
@@ -2280,6 +2328,22 @@ ${t('markdown.archiveSection')}
             }
 
             return task;
+        }
+
+        // Sub-issue helpers (parent/child task relationships, one level deep)
+        function getSubIssues(taskId) {
+            return tasks.filter(t => t.parent === taskId);
+        }
+
+        function isTaskDone(task) {
+            if (!task || !config.columns || config.columns.length === 0) return false;
+            const doneCol = config.columns.find(c => c.id === 'done') || config.columns[config.columns.length - 1];
+            return task.status === doneCol.id;
+        }
+
+        function openTaskById(taskId) {
+            const target = tasks.find(t => t.id === taskId);
+            if (target) showTaskDetail(target);
         }
 
         // Enhanced markdown to HTML converter for notes
@@ -2526,6 +2590,11 @@ ${t('markdown.archiveSection')}
             renderKanban();
         }
 
+        function toggleHideSubtasks(checked) {
+            hideSubtaskCards = checked;
+            renderKanban();
+        }
+
         function clearGlobalSearch() {
             const input = document.getElementById('globalSearchInput');
             const clearBtn = document.getElementById('clearGlobalSearch');
@@ -2541,7 +2610,8 @@ ${t('markdown.archiveSection')}
                 tag: '#3b82f6',      // Blue
                 category: '#8b5cf6', // Purple
                 user: '#10b981',     // Green
-                priority: '#f59e0b'  // Orange
+                priority: '#f59e0b', // Orange
+                parent: '#6366f1'    // Indigo
             };
 
             container.innerHTML = activeFilters.map((f, idx) => {
@@ -2564,6 +2634,11 @@ ${t('markdown.archiveSection')}
                     displayValue = fullUserFormat;
                 }
 
+                // For parent filters, show the family marker
+                if (f.type === 'parent') {
+                    displayValue = '↳ ' + f.value;
+                }
+
                 return `
                 <span style="background: ${colors[f.type]}; color: white; padding: 0.35rem 0.75rem; border-radius: 16px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 500;">
                     ${displayPriority(displayValue)}
@@ -2574,7 +2649,12 @@ ${t('markdown.archiveSection')}
         }
 
         function matchesFilters(task) {
-            // Check active filters (tags, category, user, priority)
+            // Hide sub-task cards when the board toggle is on (unless a family filter is active)
+            if (hideSubtaskCards && task.parent && !activeFilters.some(f => f.type === 'parent')) {
+                return false;
+            }
+
+            // Check active filters (tags, category, user, priority, parent)
             if (activeFilters.length > 0) {
                 const matchesActiveFilters = activeFilters.every(filter => {
                     if (filter.type === 'tag') {
@@ -2586,6 +2666,9 @@ ${t('markdown.archiveSection')}
                         return task.assignees.some(assignee => normalizeUserId(assignee) === filter.value);
                     } else if (filter.type === 'priority') {
                         return task.priority === filter.value;
+                    } else if (filter.type === 'parent') {
+                        // Family filter: show the parent task and all its sub-tasks
+                        return task.id === filter.value || task.parent === filter.value;
                     }
                     return false;
                 });
@@ -2702,6 +2785,22 @@ ${t('markdown.archiveSection')}
                 `<option value="${clean(priority)}">${displayPriority(priority)}</option>`
             ).join('');
 
+            // Populate parent select (one level: only parentless tasks can be parents)
+            const parentSelect = document.getElementById('taskParent');
+            const editingId = task ? task.id : null;
+            const editingHasChildren = editingId ? tasks.some(t => t.parent === editingId) : false;
+            const parentCandidates = tasks.filter(t => !t.parent && t.id !== editingId);
+            let parentOptions = `<option value="">${t('taskForm.parentNone')}</option>` + parentCandidates.map(p =>
+                `<option value="${p.id}">${p.id} | ${p.title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`
+            ).join('');
+            // Keep a dangling reference (archived/deleted parent) selectable so editing doesn't drop it
+            if (task && task.parent && !parentCandidates.some(p => p.id === task.parent)) {
+                parentOptions += `<option value="${task.parent}">${task.parent}</option>`;
+            }
+            parentSelect.innerHTML = parentOptions;
+            parentSelect.disabled = editingHasChildren;
+            parentSelect.title = editingHasChildren ? t('taskForm.parentDisabledHelp') : '';
+
             // Update autocomplete
             updateAutocomplete();
 
@@ -2719,6 +2818,7 @@ ${t('markdown.archiveSection')}
                 document.getElementById('taskTags').value = task.tags.join(' ');
                 document.getElementById('taskDescription').value = task.description || '';
                 document.getElementById('taskNotes').value = task.notes || '';
+                document.getElementById('taskParent').value = task.parent || '';
                 formSubtasks = JSON.parse(JSON.stringify(task.subtasks || []));
             } else {
                 form.reset();
@@ -2839,13 +2939,38 @@ ${t('markdown.archiveSection')}
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${(task.subtasks.filter(s => s.completed).length / task.subtasks.length * 100)}%"></div>
                         </div>
-                        <span>${task.subtasks.filter(s => s.completed).length}/${task.subtasks.length}</span>
+                        <span>☑ ${task.subtasks.filter(s => s.completed).length}/${task.subtasks.length}</span>
                     </div>
                 </div>` : '';
+
+            // Sub-issue rollup: progress of child tasks that are in the Done column
+            const subIssues = getSubIssues(task.id);
+            const doneSubIssues = subIssues.filter(isTaskDone).length;
+            const subIssueProgress = subIssues.length > 0 ?
+                `<div class="task-subtasks" title="${t('tooltip.subIssueProgress')}">
+                    <div class="subtask-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(doneSubIssues / subIssues.length * 100)}%; background: #6366f1;"></div>
+                        </div>
+                        <span>⧉ ${doneSubIssues}/${subIssues.length}</span>
+                    </div>
+                </div>` : '';
+
+            // Parent chip: shown on cards that belong to a parent task
+            let parentChip = '';
+            if (task.parent) {
+                const parentTask = tasks.find(pt => pt.id === task.parent);
+                if (parentTask) {
+                    parentChip = `<span class="task-parent-chip" onclick="event.stopPropagation(); clickToFilter('parent', '${task.parent}');" style="cursor: pointer; font-size: 0.75rem; font-weight: 600; color: #6366f1;" title="${t('tooltip.filterByParent')}: ${parentTask.title.replace(/"/g, '&quot;')}">↳ ${task.parent}</span>`;
+                } else {
+                    parentChip = `<span class="task-parent-chip" style="font-size: 0.75rem; color: var(--text-secondary); text-decoration: line-through;" title="${t('tooltip.parentMissing')}">↳ ${task.parent}</span>`;
+                }
+            }
 
             taskEl.innerHTML = `
                 <div class="task-header">
                     <span class="task-id">${task.id}</span>
+                    ${parentChip}
                 </div>
                 <div class="task-title">${task.title}</div>
                 ${task.description ? `<div class="task-description">${markdownToHtml(task.description)}</div>` : ''}
@@ -2859,6 +2984,7 @@ ${t('markdown.archiveSection')}
                     ${task.tags.map(tag => `<span class="tag" onclick="event.stopPropagation(); clickToFilter('tag', '${tag.replace(/'/g, "\\'")}');" style="cursor: pointer;" title="${t('tooltip.filterByTag')}">${tag}</span>`).join('')}
                 </div>
                 ${subtaskProgress}
+                ${subIssueProgress}
             `;
 
             taskEl.addEventListener('dragstart', drag);
@@ -3118,6 +3244,11 @@ ${t('markdown.archiveSection')}
             const statusColumn = config.columns.find(col => col.id === task.status);
             const statusName = statusColumn ? statusColumn.name : task.status;
 
+            // Sub-issue data: parent link and children of this task
+            const parentTask = task.parent ? tasks.find(pt => pt.id === task.parent) : null;
+            const subIssues = getSubIssues(task.id);
+            const doneSubIssues = subIssues.filter(isTaskDone).length;
+
             modalBody.innerHTML = `
                 <div style="padding: 0.75rem 1.5rem 1.5rem;">
                     <!-- Title -->
@@ -3136,6 +3267,15 @@ ${t('markdown.archiveSection')}
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">${t('meta.status')}</div>
                             <div style="font-weight: 500;">${statusName}</div>
                         </div>
+
+                        ${task.parent ? `
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">${t('meta.parent')}</div>
+                                <div style="font-weight: 500;">${parentTask
+                                    ? `<a href="#" onclick="event.preventDefault(); openTaskById('${task.parent}');" style="color: #6366f1; text-decoration: none;" title="${parentTask.title.replace(/"/g, '&quot;')}">↳ ${task.parent}</a>`
+                                    : `<span style="color: var(--text-secondary); text-decoration: line-through;" title="${t('tooltip.parentMissing')}">↳ ${task.parent}</span>`}</div>
+                            </div>
+                        ` : ''}
 
                         ${task.category ? `
                             <div>
@@ -3200,6 +3340,31 @@ ${t('markdown.archiveSection')}
                         </div>
                     ` : ''}
 
+                    <!-- Sub-issues (child tasks) -->
+                    ${subIssues.length > 0 ? `
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">${t('meta.subissues', {completed: doneSubIssues, total: subIssues.length})}</div>
+                            <div style="height: 6px; background: var(--bg-secondary); border-radius: 3px; margin-bottom: 0.5rem; overflow: hidden;">
+                                <div style="height: 100%; width: ${(doneSubIssues / subIssues.length * 100)}%; background: #6366f1; border-radius: 3px;"></div>
+                            </div>
+                            <ul style="list-style: none; padding: 0; margin: 0;">
+                                ${subIssues.map(si => {
+                                    const siColumn = config.columns.find(c => c.id === si.status);
+                                    const siDone = isTaskDone(si);
+                                    const escapedTitle = si.title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                    return `
+                                    <li onclick="openTaskById('${si.id}')" style="padding: 0.4rem 0.5rem; margin-bottom: 0.15rem; background: var(--bg-secondary); border-radius: 4px; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; line-height: 1.3;" title="${t('tooltip.openSubIssue')}">
+                                        <span>${siDone ? '✅' : '⚪'}</span>
+                                        <span style="font-weight: 600; color: #6366f1; font-size: 0.85rem;">${si.id}</span>
+                                        <span style="flex: 1; ${siDone ? 'text-decoration: line-through; color: var(--text-secondary);' : ''}">${escapedTitle}</span>
+                                        <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 10px; background: ${siDone ? '#10b981' : 'var(--border-color, #cbd5e0)'}; color: ${siDone ? 'white' : 'var(--text-primary)'};">${siColumn ? siColumn.name : si.status}</span>
+                                    </li>
+                                    `;
+                                }).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
                     <!-- Subtasks -->
                     <div style="margin-bottom: 1rem;">
                         <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">${t('meta.subtasks', {completed: task.subtasks.filter(st => st.completed).length, total: task.subtasks.length})}</div>
@@ -3210,6 +3375,7 @@ ${t('markdown.archiveSection')}
                                 <li style="padding: 0.28rem 0.36rem; margin-bottom: 0.08rem; background: var(--bg-secondary); border-radius: 4px; display: flex; align-items: center; gap: 0.32rem; line-height: 1.2;">
                                     <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleSubtask('${task.id}', ${idx})" style="width: 16px; height: 16px; cursor: pointer;">
                                     <span ondblclick="editSubtask('${task.id}', ${idx})" style="flex: 1; ${st.completed ? 'text-decoration: line-through; color: var(--text-secondary);' : ''} cursor: pointer;" title="${t('tooltip.doubleClickEdit')}">${escapedText}</span>
+                                    ${!task.parent ? `<button onclick="promoteSubtask('${task.id}', ${idx})" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.2rem;" title="${t('tooltip.promote')}">⤴️</button>` : ''}
                                     <button onclick="deleteSubtask('${task.id}', ${idx})" style="background: none; border: none; cursor: pointer; color: #e53e3e; font-size: 1.1rem; padding: 0.2rem;" title="${t('tooltip.delete')}">🗑️</button>
                                 </li>
                                 `;
@@ -3302,6 +3468,47 @@ ${t('markdown.archiveSection')}
             }
         }
 
+        // Promote a checkbox subtask into a full task linked to this one
+        function promoteSubtask(taskId, subtaskIdx) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task || !task.subtasks[subtaskIdx]) return;
+            if (task.parent) return; // One level only: a sub-task cannot become a parent
+
+            const st = task.subtasks[subtaskIdx];
+            if (!confirm(t('confirm.promoteSubtask', {text: st.text}))) return;
+
+            task.subtasks.splice(subtaskIdx, 1);
+
+            config.lastTaskId++;
+            const newTaskId = 'TASK-' + String(config.lastTaskId).padStart(3, '0');
+            const doneCol = config.columns.find(c => c.id === 'done') || config.columns[config.columns.length - 1];
+            const today = new Date().toISOString().split('T')[0];
+
+            tasks.push({
+                id: newTaskId,
+                title: st.text,
+                status: st.completed && doneCol ? doneCol.id : config.columns[0].id,
+                priority: '',
+                category: task.category || '',
+                assignees: [],
+                tags: [],
+                created: today,
+                started: '',
+                due: '',
+                completed: st.completed ? today : '',
+                description: '',
+                subtasks: [],
+                notes: '',
+                parent: task.id
+            });
+
+            currentDetailTask = task;
+            showTaskDetail(task);
+            renderKanban();
+            autoSave();
+            showNotification(t('notif.subtaskPromoted', {id: newTaskId}), 'success');
+        }
+
         // Handle task form submission (create or edit)
         document.getElementById('newTaskForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -3319,6 +3526,8 @@ ${t('markdown.archiveSection')}
             const tagsInput = document.getElementById('taskTags').value.trim();
             const description = document.getElementById('taskDescription').value.trim();
             const notes = document.getElementById('taskNotes').value.trim();
+            const parentSelect = document.getElementById('taskParent');
+            const parentValue = parentSelect.value;
 
             // Parse tags and assignees
             const tags = tagsInput ? tagsInput.split(/\s+/).filter(t => t.startsWith('#') || t).map(t => t.startsWith('#') ? t : '#' + t) : [];
@@ -3342,6 +3551,7 @@ ${t('markdown.archiveSection')}
                     task.description = description;
                     task.subtasks = formSubtasks;
                     task.notes = notes;
+                    if (!parentSelect.disabled) task.parent = parentValue;
                     showNotification(t('notif.taskEdited', {id: taskId}), 'success');
                 }
             } else {
@@ -3362,7 +3572,8 @@ ${t('markdown.archiveSection')}
                     completed: completed || '',
                     description,
                     subtasks: formSubtasks,
-                    notes
+                    notes,
+                    parent: parentValue
                 });
                 showNotification(t('notif.taskCreated', {id: newTaskId}), 'success');
             }
@@ -3408,6 +3619,7 @@ ${t('markdown.archiveSection')}
             let md = `${t('markdown.archiveTitle')}\n\n${t('markdown.archiveDesc')}\n\n${t('markdown.archiveSection')}\n\n`;
             archivedTasks.forEach(task => {
                 md += `### ${task.id} | ${task.title}\n`;
+                if (task.parent) md += `**Parent**: ${task.parent}\n`;
                 let meta = '';
                 if (task.priority) meta += `**Priority**: ${task.priority}`;
                 if (task.category) meta += ` | **Category**: ${task.category}`;
@@ -3440,7 +3652,11 @@ ${t('markdown.archiveSection')}
 
         function archiveCurrentTask() {
             if (!currentDetailTask) return;
-            if (confirm(t('confirm.archiveTask', {title: currentDetailTask.title}))) {
+            const openChildren = getSubIssues(currentDetailTask.id).filter(c => !isTaskDone(c));
+            const confirmMessage = openChildren.length > 0
+                ? t('confirm.archiveParentTask', {title: currentDetailTask.title, count: openChildren.length})
+                : t('confirm.archiveTask', {title: currentDetailTask.title});
+            if (confirm(confirmMessage)) {
                 // Remove from active tasks
                 const idx = tasks.findIndex(t => t.id === currentDetailTask.id);
                 if (idx >= 0) {
@@ -3475,6 +3691,11 @@ ${t('markdown.archiveSection')}
                 const idx = taskList.findIndex(t => t.id === taskId);
                 if (idx >= 0) {
                     taskList.splice(idx, 1);
+
+                    // Unlink sub-tasks of a permanently deleted parent
+                    if (!fromArchive) {
+                        tasks.forEach(t => { if (t.parent === taskId) t.parent = ''; });
+                    }
 
                     // Save both files
                     if (fromArchive) {
@@ -3706,6 +3927,8 @@ ${t('markdown.archiveSection')}
                 const columnTasks = tasks.filter(t => t.status === column.id);
                 columnTasks.forEach(task => {
                     md += `### ${task.id} | ${task.title}\n`;
+
+                    if (task.parent) md += `**Parent**: ${task.parent}\n`;
 
                     let meta = '';
                     if (task.priority) meta += `**Priority**: ${task.priority}`;

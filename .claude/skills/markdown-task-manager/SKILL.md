@@ -20,6 +20,7 @@ description: Use when managing tasks, the system is a Kanban task manager based 
 ```markdown
 ### TASK-XXX | Task title
 
+**Parent**: TASK-YYY
 **Priority**: [Critical|High|Medium|Low] | **Category**: [Value] | **Assigned**: @user1, @user2
 **Created**: YYYY-MM-DD | **Started**: YYYY-MM-DD | **Due**: YYYY-MM-DD | **Finished**: YYYY-MM-DD
 **Tags**: #tag1 #tag2 #tag3
@@ -48,13 +49,41 @@ What was done.
 
 **Why?** The HTML parser of the application does not recognize `##` inside tasks.
 
+## 🔗 Sub-issues (Parent/Child Tasks)
+
+Two mechanisms exist for breaking down work — use the right one:
+
+1. **Checkbox subtasks** (`- [ ] ...` under `**Subtasks**:`) — for small steps inside one ticket that don't need their own tracking.
+2. **Sub-issue tasks** — when a piece of work is substantial (own priority, assignee, status), create it as a **separate task** with a `**Parent**: TASK-XXX` line pointing at the parent task.
+
+Rules:
+
+- `**Parent**: TASK-XXX` is **optional** and goes on its own line, immediately after the `### TASK-XXX | Title` line
+- The relationship lives **only on the child** (single source of truth). Never write a list of children into the parent
+- **One level deep**: a task that has a parent must never be a parent itself
+- Sub-issue tasks move between columns independently of their parent
+- The app shows the parent's sub-issue progress and family links automatically — do not duplicate this in Notes
+- When breaking down a big task: keep an outline in the parent's description, create each substantial piece as a sub-issue task with `**Parent**:`, and use checkbox subtasks only for the parent's own small steps
+
+Example:
+
+```markdown
+### TASK-020 | Sub-issue title
+
+**Parent**: TASK-015
+**Priority**: High | **Category**: Backend
+**Created**: 2025-01-20
+
+This substantial piece of TASK-015 is tracked as its own ticket.
+```
+
 ## 🔄 Workflow
 
 ### 1. New Request
 1. Read `kanban.md` to get the last task ID
 2. Create task in `kanban.md` → "📝 To Do" section
 3. Unique ID (TASK-XXX) auto-incremented
-4. Break down into subtasks if needed
+4. Break down if needed: checkbox subtasks for small steps, separate tasks with `**Parent**: TASK-XXX` for substantial pieces
 5. Increment counter in `<!-- Config: Last Task ID: XXX -->`
 
 ### 2. Start Work
