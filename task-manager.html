@@ -1659,9 +1659,10 @@
                 };
 
                 if (existingIndex >= 0) {
-                    // Update existing project (keep custom name if not changing)
+                    // Update existing project and move it to the front (most recently used)
                     projectData.customName = customName !== null ? customName : projects[existingIndex].customName;
-                    projects[existingIndex] = projectData;
+                    projects.splice(existingIndex, 1);
+                    projects.unshift(projectData);
                 } else {
                     // Add new project at the beginning
                     projects.unshift(projectData);
