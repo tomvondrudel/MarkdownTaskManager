@@ -313,6 +313,59 @@
             font-size: 0.7rem;
         }
 
+        .badge-area {
+            background: #E8F5E9;
+            color: #2E7D32;
+            cursor: pointer;
+        }
+
+        .badge-area.undeclared {
+            background: transparent;
+            color: #DC2626;
+            border: 1px dashed #DC2626;
+        }
+
+        .area-switch {
+            max-width: 1400px;
+            margin: 0.75rem auto 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .area-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .area-chip:hover {
+            border-color: var(--accent);
+        }
+
+        .area-chip.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .area-chip.no-area:not(.active) {
+            border-style: dashed;
+        }
+
+        .area-chip-count {
+            font-size: 0.75rem;
+            opacity: 0.75;
+        }
+
         .task-meta .badge:hover,
         .task-meta .tag:hover {
             outline: 1px solid currentColor;
@@ -598,6 +651,7 @@
                 <button id="manageColsBtn" class="btn btn-secondary" style="display: none;">⚙️ Colonnes</button>
             </div>
         </div>
+        <div id="areaSwitch" class="area-switch" style="display: none;"></div>
     </header>
     <div id="filterBar" style="display: none; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 1rem 0;">
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
@@ -719,7 +773,12 @@
                 </div>
                 <div style="margin-bottom: 1rem;">
                     <label for="taskParent" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Tâche parente</label>
-                    <select id="taskParent" style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; background: white; box-sizing: border-box;">
+                    <select id="taskParent" onchange="prefillAreaFromParent()" style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; background: white; box-sizing: border-box;">
+                    </select>
+                </div>
+                <div id="taskAreaGroup" style="margin-bottom: 1rem; display: none;">
+                    <label for="taskArea" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Zone</label>
+                    <select id="taskArea" style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; background: white; box-sizing: border-box;">
                     </select>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
@@ -838,6 +897,8 @@
         let config = {};
         let activeFilters = []; // Array of {type: 'tag'|'category'|'user', value: string}
         let globalSearchTerm = ''; // Global search term for searching in title, description, and notes
+        const NO_AREA = '__no-area__'; // Area switch value for tasks without a declared Area
+        let activeArea = ''; // Area switch selection: '' = all, NO_AREA, or a declared Area
         let isEditMode = false;
         let currentDetailTask = null;
         let formSubtasks = [];
@@ -900,6 +961,8 @@
                 'taskForm.columnLabel': 'Column *',
                 'taskForm.parentLabel': 'Parent task',
                 'taskForm.parentNone': 'None',
+                'taskForm.areaLabel': 'Area',
+                'taskForm.areaNone': 'None',
                 'taskForm.parentDisabledHelp': 'This task has sub-tasks and cannot have a parent itself',
                 'taskForm.priorityLabel': 'Priority',
                 'taskForm.priorityNone': 'None',
@@ -937,6 +1000,7 @@
                 'archives.title': '📦 Archives',
                 'archives.search': 'Search in archives...',
                 'archives.empty': 'No archived tasks',
+                'archives.areaNote': 'Showing Area: {area}',
 
                 // Project selector
                 'projects.select': 'Select a project...',
@@ -945,6 +1009,7 @@
                 'meta.priority': 'Priority',
                 'meta.status': 'Status',
                 'meta.category': 'Category',
+                'meta.area': 'Area',
                 'meta.assigned': 'Assigned to',
                 'meta.created': 'Creation date',
                 'meta.started': 'Start date',
@@ -976,6 +1041,10 @@
                 'tooltip.delete': 'Delete',
                 'tooltip.filterByParent': 'Filter by this family (parent + sub-tasks)',
                 'tooltip.parentMissing': 'Parent task not found (archived or deleted)',
+                'tooltip.filterByArea': 'Show only this Area',
+                'tooltip.areaUndeclared': 'Area not declared in the configuration',
+                'area.all': 'All',
+                'area.none': 'No area',
                 'tooltip.openSubIssue': 'Open this sub-task',
                 'tooltip.promote': 'Promote to its own task',
                 'tooltip.subIssueProgress': 'Sub-tasks completed (in Done column)',
@@ -1088,6 +1157,8 @@
                 'taskForm.columnLabel': 'Colonne *',
                 'taskForm.parentLabel': 'Tâche parente',
                 'taskForm.parentNone': 'Aucune',
+                'taskForm.areaLabel': 'Zone',
+                'taskForm.areaNone': 'Aucune',
                 'taskForm.parentDisabledHelp': 'Cette tâche a des sous-tickets et ne peut pas avoir de parent',
                 'taskForm.priorityLabel': 'Priorité',
                 'taskForm.priorityNone': 'Aucune',
@@ -1125,6 +1196,7 @@
                 'archives.title': '📦 Archives',
                 'archives.search': 'Rechercher dans les archives...',
                 'archives.empty': 'Aucune tâche archivée',
+                'archives.areaNote': 'Zone affichée : {area}',
 
                 // Project selector
                 'projects.select': 'Sélectionner un projet...',
@@ -1133,6 +1205,7 @@
                 'meta.priority': 'Priorité',
                 'meta.status': 'Statut',
                 'meta.category': 'Catégorie',
+                'meta.area': 'Zone',
                 'meta.assigned': 'Assigné à',
                 'meta.created': 'Date de création',
                 'meta.started': 'Date de début',
@@ -1164,6 +1237,10 @@
                 'tooltip.delete': 'Supprimer',
                 'tooltip.filterByParent': 'Filtrer par cette famille (parent + sous-tickets)',
                 'tooltip.parentMissing': 'Tâche parente introuvable (archivée ou supprimée)',
+                'tooltip.filterByArea': 'Afficher uniquement cette zone',
+                'tooltip.areaUndeclared': 'Zone non déclarée dans la configuration',
+                'area.all': 'Toutes',
+                'area.none': 'Sans zone',
                 'tooltip.openSubIssue': 'Ouvrir ce sous-ticket',
                 'tooltip.promote': 'Convertir en tâche à part entière',
                 'tooltip.subIssueProgress': 'Sous-tickets terminés (dans la colonne Terminé)',
@@ -1423,6 +1500,7 @@
                 'taskTitle': { prev: 'label', text: t('taskForm.titleLabel') },
                 'taskStatus': { prev: 'label', text: t('taskForm.columnLabel') },
                 'taskParent': { prev: 'label', text: t('taskForm.parentLabel') },
+                'taskArea': { prev: 'label', text: t('taskForm.areaLabel') },
                 'taskPriority': { prev: 'label', text: t('taskForm.priorityLabel') },
                 'taskCategory': { prev: 'label', text: t('taskForm.categoryLabel'), placeholder: t('taskForm.categoryPlaceholder') },
                 'taskAssignee': { prev: 'label', text: t('taskForm.assignedLabel'), placeholder: t('taskForm.assignedPlaceholder') },
@@ -1863,6 +1941,7 @@
 
                         document.getElementById('kanbanView').style.display = 'none';
                         document.getElementById('filterBar').style.display = 'none';
+                        document.getElementById('areaSwitch').style.display = 'none';
                         document.getElementById('newTaskBtn').style.display = 'none';
                         document.getElementById('archiveBtn').style.display = 'none';
                         document.getElementById('manageColsBtn').style.display = 'none';
@@ -1969,6 +2048,7 @@
 
                 console.log('File loaded, size:', currentKanbanContent.length);
                 parseMarkdown(currentKanbanContent);
+                restoreActiveArea();
                 await loadArchive(); // Load archive for historical autocomplete data
                 updateAutocomplete();
                 renderKanban();
@@ -2060,7 +2140,8 @@ ${t('markdown.archiveSection')}
                 categories: [],
                 users: [],
                 priorities: [],
-                tags: []
+                tags: [],
+                areas: []
             };
 
             console.log('=== Starting parseMarkdown ===');
@@ -2098,6 +2179,12 @@ ${t('markdown.archiveSection')}
                 if (categoriesMatch) {
                     config.categories = categoriesMatch[1].split(',').map(c => c.trim()).filter(Boolean);
                     console.log('Parsed categories:', config.categories);
+                }
+
+                // Parse areas (declared list; tasks outside it are Undeclared)
+                const areasMatch = configText.match(/\*\*Areas\*\*:\s*(.+)/);
+                if (areasMatch) {
+                    config.areas = areasMatch[1].split(',').map(a => a.trim()).filter(Boolean);
                 }
 
                 // Parse users
@@ -2248,7 +2335,8 @@ ${t('markdown.archiveSection')}
                 description: '',
                 subtasks: [],
                 notes: '',
-                parent: ''
+                parent: '',
+                area: ''
             };
 
             // Parse metadata line
@@ -2284,6 +2372,10 @@ ${t('markdown.archiveSection')}
             const parentMatch = content.match(/\*\*Parent\*\*:\s*(TASK-\d+)/);
             if (parentMatch) task.parent = parentMatch[1];
 
+            // Parse Area
+            const areaMatch = content.match(/^\*\*Area\*\*:\s*(.+)$/m);
+            if (areaMatch) task.area = areaMatch[1].trim();
+
             // Parse description (text after dates/tags but before "**Sous-tâches**" or "**Notes**")
             const lines = content.split('\n');
             let descriptionLines = [];
@@ -2291,7 +2383,7 @@ ${t('markdown.archiveSection')}
 
             for (let line of lines) {
                 // Skip metadata lines
-                if (line.match(/^\*\*(Priority|Category|Assigned|Created|Started|Due|Finished|Tags|Parent)\*\*/)) {
+                if (line.match(/^\*\*(Priority|Category|Assigned|Area|Created|Started|Due|Finished|Tags|Parent)\*\*/)) {
                     continue;
                 }
                 // Stop at subsections
@@ -2649,6 +2741,8 @@ ${t('markdown.archiveSection')}
         }
 
         function matchesFilters(task) {
+            if (!matchesArea(task)) return false;
+
             // Hide sub-task cards when the board toggle is on (unless a family filter is active)
             if (hideSubtaskCards && task.parent && !activeFilters.some(f => f.type === 'parent')) {
                 return false;
@@ -2688,6 +2782,89 @@ ${t('markdown.archiveSection')}
             }
 
             return true;
+        }
+
+        // Area switch: narrows the board to one declared Area (or to tasks without one)
+        function boardHasAreas() {
+            return !!(config.areas && config.areas.length > 0);
+        }
+
+        function isDeclaredArea(area) {
+            return !!area && boardHasAreas() && config.areas.includes(area);
+        }
+
+        function matchesArea(task) {
+            if (!boardHasAreas() || !activeArea) return true;
+            if (activeArea === NO_AREA) return !isDeclaredArea(task.area);
+            return task.area === activeArea;
+        }
+
+        function activeAreaLabel() {
+            return activeArea === NO_AREA ? t('area.none') : activeArea;
+        }
+
+        function areaStorageKey() {
+            return 'activeArea:' + (directoryHandle ? directoryHandle.name : '');
+        }
+
+        function restoreActiveArea() {
+            try {
+                activeArea = localStorage.getItem(areaStorageKey()) || '';
+            } catch (e) {
+                activeArea = '';
+            }
+            if (activeArea !== NO_AREA && !isDeclaredArea(activeArea)) activeArea = '';
+        }
+
+        function setActiveArea(area) {
+            activeArea = area;
+            try {
+                localStorage.setItem(areaStorageKey(), activeArea);
+            } catch (e) {
+                // Area switch still works for this session without storage
+            }
+            renderKanban();
+        }
+
+        // Chip click: index into config.areas, -1 = All, -2 = No area. Clicking the active chip returns to All.
+        function clickAreaChip(idx) {
+            const area = idx === -1 ? '' : idx === -2 ? NO_AREA : config.areas[idx];
+            setActiveArea(area === activeArea ? '' : area);
+        }
+
+        function renderAreaSwitch() {
+            const el = document.getElementById('areaSwitch');
+            if (!boardHasAreas() || !directoryHandle) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+
+            const openTasks = tasks.filter(task => !isTaskDone(task));
+            const hasTasksWithoutArea = tasks.some(task => !isDeclaredArea(task.area));
+            if (activeArea === NO_AREA && !hasTasksWithoutArea) activeArea = '';
+
+            const chip = (idx, label, count, isActive, extraClass = '') => `
+                <button type="button" class="area-chip ${extraClass} ${isActive ? 'active' : ''}" onclick="clickAreaChip(${idx})">
+                    ${label}${count !== null ? ` <span class="area-chip-count">${count}</span>` : ''}
+                </button>`;
+
+            let html = chip(-1, t('area.all'), null, !activeArea);
+            config.areas.forEach((area, idx) => {
+                html += chip(idx, area, openTasks.filter(task => task.area === area).length, activeArea === area);
+            });
+            if (hasTasksWithoutArea) {
+                html += chip(-2, t('area.none'), openTasks.filter(task => !isDeclaredArea(task.area)).length, activeArea === NO_AREA, 'no-area');
+            }
+
+            el.innerHTML = html;
+            el.style.display = 'flex';
+        }
+
+        // Card Area badge click: switch to that Area (undeclared → No area)
+        function clickAreaBadge(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) setActiveArea(isDeclaredArea(task.area) ? task.area : NO_AREA);
         }
 
         // Click to add filter
@@ -2803,6 +2980,16 @@ ${t('markdown.archiveSection')}
             parentSelect.disabled = editingHasChildren;
             parentSelect.title = editingHasChildren ? t('taskForm.parentDisabledHelp') : '';
 
+            // Populate Area select (only on Boards that declare Areas; keep an undeclared value so editing doesn't drop it)
+            const areaSelect = document.getElementById('taskArea');
+            let areaOptions = `<option value="">${t('taskForm.areaNone')}</option>` +
+                (config.areas || []).map(a => `<option value="${a}">${a}</option>`).join('');
+            if (task && task.area && !isDeclaredArea(task.area)) {
+                areaOptions += `<option value="${task.area}">⚠ ${task.area}</option>`;
+            }
+            areaSelect.innerHTML = areaOptions;
+            document.getElementById('taskAreaGroup').style.display = boardHasAreas() ? 'block' : 'none';
+
             // Update autocomplete
             updateAutocomplete();
 
@@ -2821,16 +3008,28 @@ ${t('markdown.archiveSection')}
                 document.getElementById('taskDescription').value = task.description || '';
                 document.getElementById('taskNotes').value = task.notes || '';
                 document.getElementById('taskParent').value = task.parent || '';
+                areaSelect.value = task.area || '';
                 formSubtasks = JSON.parse(JSON.stringify(task.subtasks || []));
             } else {
                 form.reset();
                 document.getElementById('taskEditId').value = '';
+                // New tasks start in the Area currently selected on the board
+                areaSelect.value = isDeclaredArea(activeArea) ? activeArea : '';
                 formSubtasks = [];
             }
 
             renderFormSubtasks();
             modal.classList.add('active');
             syncBodyScrollLock();
+        }
+
+        // New sub-tasks start in their parent's Area
+        function prefillAreaFromParent() {
+            if (isEditMode) return;
+            const parentTask = tasks.find(t => t.id === document.getElementById('taskParent').value);
+            if (parentTask && isDeclaredArea(parentTask.area)) {
+                document.getElementById('taskArea').value = parentTask.area;
+            }
         }
 
         function closeTaskModal() {
@@ -2878,6 +3077,8 @@ ${t('markdown.archiveSection')}
         function renderKanban() {
             const board = document.getElementById('kanbanBoard');
             board.innerHTML = '';
+
+            renderAreaSwitch();
 
             console.log('Rendering kanban with', tasks.length, 'tasks');
 
@@ -2979,6 +3180,7 @@ ${t('markdown.archiveSection')}
                 <div class="task-meta">
                     ${task.priority ? `<span class="badge badge-priority ${priorityBadgeClass}" onclick="event.stopPropagation(); clickToFilter('priority', '${task.priority.replace(/'/g, "\\'")}');" style="cursor: pointer;" title="${t('tooltip.filterByPriority')}">${displayPriority(task.priority)}</span>` : ''}
                     ${task.category ? `<span class="badge badge-category" onclick="event.stopPropagation(); clickToFilter('category', '${task.category.replace(/'/g, "\\'")}');" style="cursor: pointer;" title="${t('tooltip.filterByCategory')}">${task.category}</span>` : ''}
+                    ${task.area && boardHasAreas() ? `<span class="badge badge-area ${isDeclaredArea(task.area) ? '' : 'undeclared'}" onclick="event.stopPropagation(); clickAreaBadge('${task.id}');" title="${isDeclaredArea(task.area) ? t('tooltip.filterByArea') : t('tooltip.areaUndeclared')}">${task.area}</span>` : ''}
                     ${task.assignees.map(a => {
                         const normalizedId = normalizeUserId(a);
                         return `<span class="badge badge-assignee" onclick="event.stopPropagation(); clickToFilter('user', '${normalizedId.replace(/'/g, "\\'")}');" style="cursor: pointer;" title="${t('tooltip.filterByUser')}">${a}</span>`;
@@ -3286,6 +3488,13 @@ ${t('markdown.archiveSection')}
                             </div>
                         ` : ''}
 
+                        ${task.area ? `
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">${t('meta.area')}</div>
+                                <div style="font-weight: 500;" ${isDeclaredArea(task.area) ? '' : `title="${t('tooltip.areaUndeclared')}"`}>${isDeclaredArea(task.area) ? '' : '⚠ '}${task.area}</div>
+                            </div>
+                        ` : ''}
+
                         ${task.assignees.length > 0 ? `
                             <div>
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">${t('meta.assigned')}</div>
@@ -3501,7 +3710,8 @@ ${t('markdown.archiveSection')}
                 description: '',
                 subtasks: [],
                 notes: '',
-                parent: task.id
+                parent: task.id,
+                area: task.area || ''
             });
 
             currentDetailTask = task;
@@ -3530,6 +3740,7 @@ ${t('markdown.archiveSection')}
             const notes = document.getElementById('taskNotes').value.trim();
             const parentSelect = document.getElementById('taskParent');
             const parentValue = parentSelect.value;
+            const area = document.getElementById('taskArea').value;
 
             // Parse tags and assignees
             const tags = tagsInput ? tagsInput.split(/\s+/).filter(t => t.startsWith('#') || t).map(t => t.startsWith('#') ? t : '#' + t) : [];
@@ -3554,6 +3765,7 @@ ${t('markdown.archiveSection')}
                     task.subtasks = formSubtasks;
                     task.notes = notes;
                     if (!parentSelect.disabled) task.parent = parentValue;
+                    task.area = area;
                     showNotification(t('notif.taskEdited', {id: taskId}), 'success');
                 }
             } else {
@@ -3575,7 +3787,8 @@ ${t('markdown.archiveSection')}
                     description,
                     subtasks: formSubtasks,
                     notes,
-                    parent: parentValue
+                    parent: parentValue,
+                    area
                 });
                 showNotification(t('notif.taskCreated', {id: newTaskId}), 'success');
             }
@@ -3627,6 +3840,7 @@ ${t('markdown.archiveSection')}
                 if (task.category) meta += ` | **Category**: ${task.category}`;
                 if (task.assignees.length > 0) meta += ` | **Assigned**: ${task.assignees.join(', ')}`;
                 if (meta) md += `${meta}\n`;
+                if (task.area) md += `**Area**: ${task.area}\n`;
 
                 // Write dates line
                 let dates = '';
@@ -3744,25 +3958,30 @@ ${t('markdown.archiveSection')}
                 return;
             }
 
+            const areaTasks = archivedTasks.filter(matchesArea);
+            const areaNote = boardHasAreas() && activeArea
+                ? `<p style="text-align: center; color: #666; font-size: 0.85rem; margin: 0 0 0.75rem;">${t('archives.areaNote', {area: activeAreaLabel()})}</p>`
+                : '';
+
             const filtered = searchTerm ?
-                archivedTasks.filter(t =>
+                areaTasks.filter(t =>
                     t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     t.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
                     t.category.toLowerCase().includes(searchTerm.toLowerCase())
-                ) : archivedTasks;
+                ) : areaTasks;
 
             console.log('Filtered tasks:', filtered.length);
 
             if (filtered.length === 0) {
                 console.log('⚠️ No tasks to display - showing empty message');
-                list.innerHTML = `<p style="text-align: center; color: #999; padding: 2rem;">${t('archives.empty')}</p>`;
+                list.innerHTML = areaNote + `<p style="text-align: center; color: #999; padding: 2rem;">${t('archives.empty')}</p>`;
                 return;
             }
 
             console.log('✓ Rendering', filtered.length, 'tasks');
 
-            list.innerHTML = filtered.map(task => `
+            list.innerHTML = areaNote + filtered.map(task => `
                 <div style="background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
                         <div>
@@ -3778,6 +3997,7 @@ ${t('markdown.archiveSection')}
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
                         ${task.priority ? `<span style="background: #fbbf24; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">${displayPriority(task.priority)}</span>` : ''}
                         ${task.category ? `<span style="background: #8b5cf6; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">${task.category}</span>` : ''}
+                        ${task.area ? `<span style="background: #2E7D32; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">${task.area}</span>` : ''}
                         ${task.tags.map(t => `<span style="background: #3b82f6; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">${t}</span>`).join('')}
                     </div>
                 </div>
@@ -3917,6 +4137,7 @@ ${t('markdown.archiveSection')}
             md += `## ⚙️ Configuration\n\n`;
             md += `**Columns**: ${config.columns.map(c => `${c.name} (${c.id})`).join(' | ')}\n\n`;
             md += `**Categories**: ${config.categories.join(', ')}\n\n`;
+            if (config.areas && config.areas.length > 0) md += `**Areas**: ${config.areas.join(', ')}\n\n`;
             md += `**Users**: ${config.users.join(', ')}\n\n`;
             md += `**Priorities**: ${config.priorities.join(' | ')}\n\n`;
             md += `**Tags**: ${config.tags.map(t => '#' + t).join(' ')}\n\n`;
@@ -3937,6 +4158,7 @@ ${t('markdown.archiveSection')}
                     if (task.category) meta += ` | **Category**: ${task.category}`;
                     if (task.assignees.length > 0) meta += ` | **Assigned**: ${task.assignees.join(', ')}`;
                     if (meta) md += meta + '\n';
+                    if (task.area) md += `**Area**: ${task.area}\n`;
 
                     // Write dates line
                     let dates = '';

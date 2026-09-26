@@ -22,6 +22,7 @@ description: Use when managing tasks, the system is a Kanban task manager based 
 
 **Parent**: TASK-YYY
 **Priority**: [Critical|High|Medium|Low] | **Category**: [Value] | **Assigned**: @user1, @user2
+**Area**: [Value from **Areas**]
 **Created**: YYYY-MM-DD | **Started**: YYYY-MM-DD | **Due**: YYYY-MM-DD | **Finished**: YYYY-MM-DD
 **Tags**: #tag1 #tag2 #tag3
 
@@ -77,6 +78,18 @@ Example:
 This substantial piece of TASK-015 is tracked as its own ticket.
 ```
 
+## 🗂️ Areas
+
+A Board may declare a closed list of Areas in its configuration (`**Areas**: Scraper, Web, UX`). An Area is the one part of the project a task belongs to; the app shows a one-click switch to view a single Area.
+
+Rules:
+
+- `**Area**: Value` is **optional** and goes on its own line, immediately after the `**Priority**` line
+- **One Area per task**, and only a value from the declared `**Areas**:` list. Never invent a new Area: if none fits, leave the line out and tell the user
+- If the Board declares no `**Areas**:`, never write `**Area**:`
+- A sub-issue normally takes its parent's Area
+- Area is independent of Category (Category = kind of work, e.g. Backend; Area = part of the project, e.g. Scraper)
+
 ## 🔄 Workflow
 
 ### 1. New Request
@@ -121,6 +134,7 @@ This substantial piece of TASK-015 is tracked as its own ticket.
 
 **Columns**: 📝 To Do | 🚀 In Progress | 👀 Review | ✅ Done
 **Categories**: Frontend, Backend, DevOps
+**Areas**: Scraper, Web, UX
 **Users**: @alice, @bob
 **Tags**: #bug, #feature, #docs
 

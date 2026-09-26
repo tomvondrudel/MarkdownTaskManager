@@ -480,6 +480,25 @@ When a subtask is substantial enough to be its own ticket, link it to its parent
 - A "Hide sub-tasks" toggle in the filter bar keeps the backlog scannable
 - Archiving a parent with unfinished sub-issues asks for confirmation; deleting a parent unlinks its children
 
+**Areas (one-click view of one part of a project):**
+
+For boards that cover several parts of a project (e.g. a monorepo), declare a list of Areas in the configuration and give each task at most one:
+
+```markdown
+**Areas**: Scraper, Web, UX
+...
+### TASK-042 | Retry failed verticals
+**Priority**: High | **Category**: Backend
+**Area**: Scraper
+```
+
+- A row of Area chips sits in the header: `All · Scraper 12 · Web 7 · UX 3 · No area 30` (counts exclude Done)
+- One click shows only that Area; click it again (or **All**) to go back. The choice is remembered per project
+- The Area switch narrows everything: columns, counts and the Archives view. Other filters apply on top; **Clear all** leaves the Area alone
+- New tasks start in the selected Area; new sub-issues start in their parent's Area
+- A value not in the declared list is shown with a dashed red badge and grouped under **No area**
+- Boards without an `**Areas**:` line show no chips and behave as before
+
 **Editing:**
 - Detailed editing modal for each task
 - Modification of all fields
@@ -515,9 +534,9 @@ When a subtask is substantial enough to be its own ticket, link it to its parent
    - Shows the parent task and all its sub-issues together
 
 **How it works:**
-- Select a filter via dropdowns
-- Click on a badge in a task to filter instantly
-- Combine multiple filters (AND logic)
+- Pick a value in a dropdown to apply it immediately
+- Click on a badge in a task card (or a tag in the task detail) to filter instantly
+- Filters of the same kind are combined with OR (e.g. two categories); different kinds with AND
 - Remove a filter individually (✕ on bubble)
 - Clear all filters at once
 
@@ -759,7 +778,7 @@ Buttons:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Tags: [Select ▼] [+]   Category: [Select ▼] [+]   User: [▼]   │
+│  Tags: [Select ▼]   Category: [Select ▼]   User: [Select ▼]     │
 │                                                                   │
 │  🔵 #bug ✕    🔵 #urgent ✕    🟣 Frontend ✕    🟢 @alice ✕     │
 └─────────────────────────────────────────────────────────────────┘
@@ -848,6 +867,16 @@ Adapt to your context:
 - Web: `UI, API, Database, DevOps`
 - Mobile: `iOS, Android, Backend, Design`
 - Data: `ETL, Analysis, ML, Visualization`
+
+### Areas
+
+Optionally declare the parts of your project, for the one-click Area switch:
+
+```markdown
+**Areas**: Scraper, Web, Data Platform, UX
+```
+
+Category is the kind of work (Backend, Tests…); Area is the part of the project the work belongs to. They are independent.
 
 ### Users
 
