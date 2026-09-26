@@ -313,6 +313,11 @@
             font-size: 0.7rem;
         }
 
+        .task-meta .badge:hover,
+        .task-meta .tag:hover {
+            outline: 1px solid currentColor;
+        }
+
         .task-description {
             font-size: 0.85rem;
             color: var(--text-secondary);
@@ -617,31 +622,27 @@
             <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; justify-content: center;">
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <label style="font-weight: 500; font-size: 0.9rem;">Tags:</label>
-                    <select id="filterTagSelect" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
+                    <select id="filterTagSelect" onchange="addFilter('tag')" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
                         <option value="">Sélectionner...</option>
                     </select>
-                    <button onclick="addFilter('tag')" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">+</button>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <label style="font-weight: 500; font-size: 0.9rem;">Catégorie:</label>
-                    <select id="filterCategorySelect" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
+                    <select id="filterCategorySelect" onchange="addFilter('category')" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
                         <option value="">Sélectionner...</option>
                     </select>
-                    <button onclick="addFilter('category')" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">+</button>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <label style="font-weight: 500; font-size: 0.9rem;">Utilisateur:</label>
-                    <select id="filterUserSelect" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
+                    <select id="filterUserSelect" onchange="addFilter('user')" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
                         <option value="">Sélectionner...</option>
                     </select>
-                    <button onclick="addFilter('user')" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">+</button>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <label style="font-weight: 500; font-size: 0.9rem;">Priorité:</label>
-                    <select id="filterPrioritySelect" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
+                    <select id="filterPrioritySelect" onchange="addFilter('priority')" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; min-width: 150px;">
                         <option value="">Sélectionner...</option>
                     </select>
-                    <button onclick="addFilter('priority')" class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">+</button>
                 </div>
                 <button onclick="clearFilters()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">✕ Tout effacer</button>
                 <label style="display: flex; gap: 0.4rem; align-items: center; font-weight: 500; font-size: 0.9rem; cursor: pointer;">
@@ -868,7 +869,6 @@
                 'filters.user': 'User:',
                 'filters.priority': 'Priority:',
                 'filters.select': 'Select...',
-                'filters.add': '+',
                 'filters.clearAll': '✕ Clear all',
                 'filters.search': 'Search in tasks...',
                 'filters.searchClear': '✕',
@@ -1057,7 +1057,6 @@
                 'filters.user': 'Utilisateur:',
                 'filters.priority': 'Priorité:',
                 'filters.select': 'Sélectionner...',
-                'filters.add': '+',
                 'filters.clearAll': '✕ Tout effacer',
                 'filters.search': 'Rechercher dans les tâches...',
                 'filters.searchClear': '✕',
@@ -2655,9 +2654,11 @@ ${t('markdown.archiveSection')}
                 return false;
             }
 
-            // Check active filters (tags, category, user, priority, parent)
+            // Check active filters (tags, category, user, priority, parent):
+            // OR within the same type, AND across types
             if (activeFilters.length > 0) {
-                const matchesActiveFilters = activeFilters.every(filter => {
+                const filterTypes = [...new Set(activeFilters.map(f => f.type))];
+                const matchesActiveFilters = filterTypes.every(type => activeFilters.filter(f => f.type === type).some(filter => {
                     if (filter.type === 'tag') {
                         return task.tags.includes(filter.value) || task.tags.includes('#' + filter.value);
                     } else if (filter.type === 'category') {
@@ -2672,7 +2673,7 @@ ${t('markdown.archiveSection')}
                         return task.id === filter.value || task.parent === filter.value;
                     }
                     return false;
-                });
+                }));
                 if (!matchesActiveFilters) return false;
             }
 
@@ -3326,7 +3327,7 @@ ${t('markdown.archiveSection')}
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">${t('meta.tags')}</div>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 ${visibleTags.length > 0 ? visibleTags.map(tag => `
-                                    <span style="background: var(--accent); color: white; padding: 0.2rem 0.65rem; border-radius: 12px; font-size: 0.8rem; line-height: 1.2;">
+                                    <span onclick="closeModal(); clickToFilter('tag', '${tag.replace(/'/g, "\\'")}');" title="${t('tooltip.filterByTag')}" style="background: var(--accent); color: white; padding: 0.2rem 0.65rem; border-radius: 12px; font-size: 0.8rem; line-height: 1.2; cursor: pointer;">
                                         ${tag}
                                     </span>
                                 `).join('') : `<span style="color: var(--text-secondary); font-size: 0.9rem;">—</span>`}
