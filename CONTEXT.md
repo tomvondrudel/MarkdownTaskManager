@@ -27,5 +27,16 @@ An Area value on a task that is missing from the Board's declared list, typicall
 The board-level control that narrows the visible tasks to exactly one Area, or to all.
 _Avoid_: Area filter, tabs
 
+**Sub-issue**:
+A task that belongs to a parent task through its `**Parent**:` line; one level deep, so a sub-issue cannot itself be a parent.
+_Avoid_: Sub-task, child task
+
+**Subtask**:
+A checkbox item inside a single task's `**Subtasks**:` list; not a task of its own.
+_Avoid_: Checklist item
+
+**Family**:
+A parent task together with all its Sub-issues.
+
 **Filter**:
 A narrowing condition (Tag, Category, User, Priority, family) added on top of the Area switch.

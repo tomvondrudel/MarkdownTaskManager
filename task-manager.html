@@ -934,7 +934,7 @@
                 'filters.clearAll': '✕ Clear all',
                 'filters.search': 'Search in tasks...',
                 'filters.searchClear': '✕',
-                'filters.hideSubtasks': 'Hide sub-tasks',
+                'filters.hideSubtasks': 'Hide sub-issues',
 
                 // Welcome screen
                 'welcome.title': 'Welcome! 👋',
@@ -964,7 +964,7 @@
                 'taskForm.parentNone': 'None',
                 'taskForm.areaLabel': 'Area',
                 'taskForm.areaNone': 'None',
-                'taskForm.parentDisabledHelp': 'This task has sub-tasks and cannot have a parent itself',
+                'taskForm.parentDisabledHelp': 'This task has sub-issues and cannot have a parent itself',
                 'taskForm.priorityLabel': 'Priority',
                 'taskForm.priorityNone': 'None',
                 'taskForm.priorityCritical': 'Critical',
@@ -1032,6 +1032,7 @@
                 'action.edit': '✏️',
                 'action.moveUp': 'Move up',
                 'action.moveDown': 'Move down',
+                'action.filterFamily': 'Filter family',
 
                 // Tooltips
                 'tooltip.filterByCategory': 'Filter by this category',
@@ -1040,15 +1041,16 @@
                 'tooltip.filterByPriority': 'Filter by this priority',
                 'tooltip.doubleClickEdit': 'Double-click to edit',
                 'tooltip.delete': 'Delete',
-                'tooltip.filterByParent': 'Filter by this family (parent + sub-tasks)',
+                'tooltip.filterByParent': 'Filter by this family (parent + sub-issues)',
+                'card.familyChip': '⧉ {count} sub-issues',
                 'tooltip.parentMissing': 'Parent task not found (archived or deleted)',
                 'tooltip.filterByArea': 'Show only this Area',
                 'tooltip.areaUndeclared': 'Area not declared in the configuration',
                 'area.all': 'All',
                 'area.none': 'No area',
-                'tooltip.openSubIssue': 'Open this sub-task',
+                'tooltip.openSubIssue': 'Open this sub-issue',
                 'tooltip.promote': 'Promote to its own task',
-                'tooltip.subIssueProgress': 'Sub-tasks completed (in Done column)',
+                'tooltip.subIssueProgress': 'Sub-issues completed (in Done column)',
 
                 // Notifications
                 'notif.folderLoaded': 'Folder loaded successfully!',
@@ -1081,7 +1083,7 @@
                 'confirm.deleteSubtask': 'Delete this subtask?',
                 'confirm.deleteProject': 'Remove project "{name}" from the recent list?\n\nThis only removes it from the dropdown - your files will not be deleted.',
                 'confirm.archiveTask': 'Archive task "{title}"?',
-                'confirm.archiveParentTask': '⚠️ Task "{title}" has {count} unfinished sub-task(s).\n\nArchive it anyway? The sub-tasks will remain on the board.',
+                'confirm.archiveParentTask': '⚠️ Task "{title}" has {count} unfinished sub-issue(s).\n\nArchive it anyway? The sub-issues will remain on the board.',
                 'confirm.promoteSubtask': 'Convert subtask "{text}" into its own task?',
                 'confirm.deleteTask': '⚠️ WARNING: Permanently delete task "{title}"?\n\nThis action cannot be undone.',
                 'confirm.deleteTaskFromArchive': '⚠️ WARNING: Permanently delete task "{title}"?\n\nThis action cannot be undone.\n\nIf you want to keep it in history, use "Archive" instead.',
@@ -1228,6 +1230,7 @@
                 'action.edit': '✏️',
                 'action.moveUp': 'Déplacer vers le haut',
                 'action.moveDown': 'Déplacer vers le bas',
+                'action.filterFamily': 'Filtrer la famille',
 
                 // Tooltips
                 'tooltip.filterByCategory': 'Filtrer par cette catégorie',
@@ -1237,6 +1240,7 @@
                 'tooltip.doubleClickEdit': 'Double-cliquez pour éditer',
                 'tooltip.delete': 'Supprimer',
                 'tooltip.filterByParent': 'Filtrer par cette famille (parent + sous-tickets)',
+                'card.familyChip': '⧉ {count} sous-tickets',
                 'tooltip.parentMissing': 'Tâche parente introuvable (archivée ou supprimée)',
                 'tooltip.filterByArea': 'Afficher uniquement cette zone',
                 'tooltip.areaUndeclared': 'Zone non déclarée dans la configuration',
@@ -1596,7 +1600,7 @@
             const clearBtn = filterBar.querySelector('button[onclick="clearFilters()"]');
             if (clearBtn) clearBtn.textContent = t('filters.clearAll');
 
-            // Update hide sub-tasks toggle label
+            // Update hide sub-issues toggle label
             const hideLabel = document.getElementById('hideSubtasksLabel');
             if (hideLabel) hideLabel.textContent = t('filters.hideSubtasks');
         }
@@ -2744,7 +2748,7 @@ ${t('markdown.archiveSection')}
         function matchesFilters(task) {
             if (!matchesArea(task)) return false;
 
-            // Hide sub-task cards when the board toggle is on (unless a family filter is active)
+            // Hide sub-issue cards when the board toggle is on (unless a family filter is active)
             if (hideSubtaskCards && task.parent && !activeFilters.some(f => f.type === 'parent')) {
                 return false;
             }
@@ -2764,7 +2768,7 @@ ${t('markdown.archiveSection')}
                     } else if (filter.type === 'priority') {
                         return task.priority === filter.value;
                     } else if (filter.type === 'parent') {
-                        // Family filter: show the parent task and all its sub-tasks
+                        // Family filter: show the parent task and all its sub-issues
                         return task.id === filter.value || task.parent === filter.value;
                     }
                     return false;
@@ -2772,10 +2776,12 @@ ${t('markdown.archiveSection')}
                 if (!matchesActiveFilters) return false;
             }
 
-            // Check global search term (searches in title, description, and notes)
+            // Check global search term (searches in ID, parent ID, title, description, and notes)
             if (globalSearchTerm) {
                 const searchLower = globalSearchTerm.toLowerCase();
                 const matchesSearch =
+                    (task.id && task.id.toLowerCase().includes(searchLower)) ||
+                    (task.parent && task.parent.toLowerCase().includes(searchLower)) ||
                     (task.title && task.title.toLowerCase().includes(searchLower)) ||
                     (task.description && task.description.toLowerCase().includes(searchLower)) ||
                     (task.notes && task.notes.toLowerCase().includes(searchLower));
@@ -3024,7 +3030,7 @@ ${t('markdown.archiveSection')}
             syncBodyScrollLock();
         }
 
-        // New sub-tasks start in their parent's Area
+        // New sub-issues start in their parent's Area
         function prefillAreaFromParent() {
             if (isEditMode) return;
             const parentTask = tasks.find(t => t.id === document.getElementById('taskParent').value);
@@ -3160,9 +3166,11 @@ ${t('markdown.archiveSection')}
                     </div>
                 </div>` : '';
 
-            // Parent chip: shown on cards that belong to a parent task
+            // Family chip: a sub-issue links up to its parent (indigo), a parent links to its own family (teal)
             let parentChip = '';
-            if (task.parent) {
+            if (subIssues.length > 0) {
+                parentChip = `<span class="task-parent-chip" onclick="event.stopPropagation(); clickToFilter('parent', '${task.id}');" style="cursor: pointer; font-size: 0.75rem; font-weight: 600; color: #0d9488;" title="${t('tooltip.filterByParent')}">${t('card.familyChip', {count: subIssues.length})}</span>`;
+            } else if (task.parent) {
                 const parentTask = tasks.find(pt => pt.id === task.parent);
                 if (parentTask) {
                     parentChip = `<span class="task-parent-chip" onclick="event.stopPropagation(); clickToFilter('parent', '${task.parent}');" style="cursor: pointer; font-size: 0.75rem; font-weight: 600; color: #6366f1;" title="${t('tooltip.filterByParent')}: ${parentTask.title.replace(/"/g, '&quot;')}">↳ ${task.parent}</span>`;
@@ -3477,7 +3485,8 @@ ${t('markdown.archiveSection')}
                             <div>
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">${t('meta.parent')}</div>
                                 <div style="font-weight: 500;">${parentTask
-                                    ? `<a href="#" onclick="event.preventDefault(); openTaskById('${task.parent}');" style="color: #6366f1; text-decoration: none;" title="${parentTask.title.replace(/"/g, '&quot;')}">↳ ${task.parent}</a>`
+                                    ? `<a href="#" onclick="event.preventDefault(); openTaskById('${task.parent}');" style="color: #6366f1; text-decoration: none;" title="${parentTask.title.replace(/"/g, '&quot;')}">↳ ${task.parent}</a>
+                                       <button onclick="filterFamily('${task.parent}')" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 0 0.25rem; color: #6366f1;" title="${t('tooltip.filterByParent')}">⧉</button>`
                                     : `<span style="color: var(--text-secondary); text-decoration: line-through;" title="${t('tooltip.parentMissing')}">↳ ${task.parent}</span>`}</div>
                             </div>
                         ` : ''}
@@ -3555,7 +3564,10 @@ ${t('markdown.archiveSection')}
                     <!-- Sub-issues (child tasks) -->
                     ${subIssues.length > 0 ? `
                         <div style="margin-bottom: 1.5rem;">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600;">${t('meta.subissues', {completed: doneSubIssues, total: subIssues.length})}</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">${t('meta.subissues', {completed: doneSubIssues, total: subIssues.length})}</div>
+                                <button onclick="filterFamily('${task.id}')" class="btn btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.8rem;" title="${t('tooltip.filterByParent')}">⧉ ${t('action.filterFamily')}</button>
+                            </div>
                             <div style="height: 6px; background: var(--bg-secondary); border-radius: 3px; margin-bottom: 0.5rem; overflow: hidden;">
                                 <div style="height: 100%; width: ${(doneSubIssues / subIssues.length * 100)}%; background: #6366f1; border-radius: 3px;"></div>
                             </div>
@@ -3618,6 +3630,12 @@ ${t('markdown.archiveSection')}
         function closeModal() {
             document.getElementById('taskModal').classList.remove('active');
             syncBodyScrollLock();
+        }
+
+        // Family filter from the detail view: close it so the filtered board is visible
+        function filterFamily(parentId) {
+            closeModal();
+            clickToFilter('parent', parentId);
         }
 
         function editCurrentTask() {
@@ -3684,7 +3702,7 @@ ${t('markdown.archiveSection')}
         function promoteSubtask(taskId, subtaskIdx) {
             const task = tasks.find(t => t.id === taskId);
             if (!task || !task.subtasks[subtaskIdx]) return;
-            if (task.parent) return; // One level only: a sub-task cannot become a parent
+            if (task.parent) return; // One level only: a sub-issue cannot become a parent
 
             const st = task.subtasks[subtaskIdx];
             if (!confirm(t('confirm.promoteSubtask', {text: st.text}))) return;
@@ -3909,7 +3927,7 @@ ${t('markdown.archiveSection')}
                 if (idx >= 0) {
                     taskList.splice(idx, 1);
 
-                    // Unlink sub-tasks of a permanently deleted parent
+                    // Unlink sub-issues of a permanently deleted parent
                     if (!fromArchive) {
                         tasks.forEach(t => { if (t.parent === taskId) t.parent = ''; });
                     }
@@ -3966,6 +3984,7 @@ ${t('markdown.archiveSection')}
 
             const filtered = searchTerm ?
                 areaTasks.filter(t =>
+                    t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     t.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||

@@ -475,9 +475,11 @@ When a subtask is substantial enough to be its own ticket, link it to its parent
 - A child task carries `**Parent**: TASK-XXX` in the markdown — a single source of truth, GitHub sub-issues style
 - Child cards show a clickable `↳ TASK-XXX` chip; clicking filters the board to that family (parent + all its sub-issues)
 - Parent cards show a sub-issue rollup (e.g., "⧉ 2/7") counting children in the Done column, separate from the checkbox progress bar
-- The parent's detail modal lists all sub-issues with their status, clickable to navigate
+- Parent cards also show a teal `⧉ N sub-issues` chip; clicking it filters the board to that family
+- The parent's detail modal lists all sub-issues with their status, clickable to navigate, plus a "⧉ Filter family" button
+- Searching for a task ID (e.g., "TASK-015") also finds its sub-issues
 - One level deep: a task with a parent cannot itself be a parent
-- A "Hide sub-tasks" toggle in the filter bar keeps the backlog scannable
+- A "Hide sub-issues" toggle in the filter bar keeps the backlog scannable
 - Archiving a parent with unfinished sub-issues asks for confirmation; deleting a parent unlinks its children
 
 **Areas (one-click view of one part of a project):**
@@ -530,7 +532,8 @@ For boards that cover several parts of a project (e.g. a monorepo), declare a li
    - Example: @alice, @bob
 
 5. **Family** 🟦 (indigo bubbles)
-   - Click the `↳ TASK-XXX` chip on a sub-issue card
+   - Click the `↳ TASK-XXX` chip on a sub-issue card, or the teal `⧉ N sub-issues` chip on a parent card
+   - Or use "⧉ Filter family" in the parent's detail modal (the ⧉ next to the parent link on a sub-issue)
    - Shows the parent task and all its sub-issues together
 
 **How it works:**
